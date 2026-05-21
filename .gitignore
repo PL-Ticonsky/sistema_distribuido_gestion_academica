@@ -1,0 +1,36 @@
+# Python / Django
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Django local
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+
+# PostgreSQL dumps/backups
+*.dump
+*.backup
+*.tar
+*.sql.gz
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.swp
