@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Tarifas de matricula{% endblock %}
+
+{% block content %}
+<h1>Tarifas de matricula</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Programa</th>
+            <th>Facultad</th>
+            <th>Periodo</th>
+            <th>Valor</th>
+            <th>Limite ordinaria</th>
+            <th>Limite extraordinaria</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tarifa in tarifas %}
+            <tr>
+                <td>{{ tarifa.programa_academico.nombre_programa }}</td>
+                <td>{{ tarifa.programa_academico.facultad.nombre_facultad }}</td>
+                <td>{{ tarifa.periodo_academico.id_periodo_academico }}</td>
+                <td>{{ tarifa.valor_matricula }}</td>
+                <td>{{ tarifa.fecha_limite_ordinaria }}</td>
+                <td>{{ tarifa.fecha_limite_extraordinaria }}</td>
+                <td>{{ tarifa.estado }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">No hay tarifas registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

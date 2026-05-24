@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Programas academicos{% endblock %}
+
+{% block content %}
+<h1>Programas academicos</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Programa</th>
+            <th>Facultad</th>
+            <th>Estado</th>
+            <th>Modalidad</th>
+            <th>Nivel</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for programa in programas %}
+            <tr>
+                <td>{{ programa.id_programa_academico }}</td>
+                <td>{{ programa.nombre_programa }}</td>
+                <td>
+                    <a href="{% url 'estructura:facultad_detail' programa.facultad_id %}">
+                        {{ programa.facultad.nombre_facultad }}
+                    </a>
+                </td>
+                <td>{{ programa.estado }}</td>
+                <td>{{ programa.modalidad }}</td>
+                <td>{{ programa.nivel_formacion }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">No hay programas registrados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

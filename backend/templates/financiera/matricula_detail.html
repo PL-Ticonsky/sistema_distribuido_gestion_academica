@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de matricula{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:matricula_list' %}">Volver a matriculas</a></p>
+
+<h1>Matricula</h1>
+
+<dl>
+    <dt>Estudiante</dt>
+    <dd>{{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}</dd>
+    <dt>Correo</dt>
+    <dd>{{ matricula.recibo.estudiante.usuario.correo|default:"-" }}</dd>
+    <dt>Programa</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}</dd>
+    <dt>Periodo</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</dd>
+    <dt>Estado matricula</dt>
+    <dd>{{ matricula.estado_matricula }}</dd>
+    <dt>Estado pago</dt>
+    <dd>{{ matricula.recibo.estado_pago }}</dd>
+    <dt>Valor matricula</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.valor_matricula }}</dd>
+    <dt>Valor pagado</dt>
+    <dd>{{ matricula.recibo.valor_pagado|default:"-" }}</dd>
+</dl>
+
+<p>
+    <a href="{% url 'financiera:recibo_detail' matricula.recibo.id_recibo %}">
+        Ver recibo asociado
+    </a>
+</p>
+{% endblock %}

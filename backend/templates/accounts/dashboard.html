@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1>Dashboard temporal</h1>
+
+<dl>
+    <dt>Nombre</dt>
+    <dd>{{ request.user.nombre }}</dd>
+    <dt>Correo</dt>
+    <dd>{{ request.user.correo }}</dd>
+    <dt>Activo</dt>
+    <dd>{{ request.user.is_active|yesno:"Si,No" }}</dd>
+    <dt>Staff</dt>
+    <dd>{{ request.user.is_staff|yesno:"Si,No" }}</dd>
+    <dt>Superusuario</dt>
+    <dd>{{ request.user.is_superuser|yesno:"Si,No" }}</dd>
+</dl>
+
+<h2>Estructura institucional</h2>
+<ul>
+    <li><a href="{% url 'estructura:facultad_list' %}">Facultades</a></li>
+    <li><a href="{% url 'estructura:programa_list' %}">Programas academicos</a></li>
+    <li><a href="{% url 'estructura:periodo_list' %}">Periodos academicos</a></li>
+</ul>
+
+<h2>Gestion academica</h2>
+<ul>
+    <li><a href="{% url 'academica:asignatura_list' %}">Asignaturas</a></li>
+    <li><a href="{% url 'academica:plan_estudios_list' %}">Planes de estudio</a></li>
+    <li><a href="{% url 'academica:prerequisito_list' %}">Prerrequisitos</a></li>
+    <li><a href="{% url 'academica:grupo_list' %}">Grupos academicos</a></li>
+    <li><a href="{% url 'academica:inscripcion_list' %}">Inscripciones</a></li>
+</ul>
+
+<h2>Gestion financiera</h2>
+<ul>
+    <li><a href="{% url 'financiera:tarifa_list' %}">Tarifas de matricula</a></li>
+    <li><a href="{% url 'financiera:recibo_list' %}">Recibos</a></li>
+    <li><a href="{% url 'financiera:matricula_list' %}">Matriculas</a></li>
+</ul>
+{% endblock %}

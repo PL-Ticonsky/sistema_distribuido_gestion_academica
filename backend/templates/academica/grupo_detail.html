@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de grupo{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:grupo_list' %}">Volver a grupos</a></p>
+
+<h1>
+    {{ grupo.programa_asignatura.asignatura.nombre_asignatura }}
+    - {{ grupo.codigo_grupo }}
+</h1>
+
+<dl>
+    <dt>Programa</dt>
+    <dd>{{ grupo.programa_asignatura.programa_academico.nombre_programa }}</dd>
+    <dt>Periodo</dt>
+    <dd>{{ grupo.periodo_academico.id_periodo_academico }}</dd>
+    <dt>Cupo maximo</dt>
+    <dd>{{ grupo.cupo_maximo }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ grupo.estado_grupo }}</dd>
+    <dt>Profesor</dt>
+    <dd>
+        {% if grupo.profesor %}
+            {{ grupo.profesor.usuario.nombre|default:grupo.profesor_id }}
+        {% else %}
+            Sin asignar
+        {% endif %}
+    </dd>
+</dl>
+
+<h2>Estudiantes inscritos</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Estado</th>
+            <th>Nota 1</th>
+            <th>Nota 2</th>
+            <th>Nota 3</th>
+            <th>Nota final</th>
+            <th>Intento</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for inscripcion in grupo.inscripciones.all %}
+            <tr>
+                <td>
+                    {{ inscripcion.estudiante.usuario.nombre|default:inscripcion.estudiante_id }}
+                </td>
+                <td>{{ inscripcion.estado_inscripcion }}</td>
+                <td>{{ inscripcion.nota1|default:"-" }}</td>
+                <td>{{ inscripcion.nota2|default:"-" }}</td>
+                <td>{{ inscripcion.nota3|default:"-" }}</td>
+                <td>{{ inscripcion.nota_final|default:"-" }}</td>
+                <td>{{ inscripcion.intento }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">No hay estudiantes inscritos.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

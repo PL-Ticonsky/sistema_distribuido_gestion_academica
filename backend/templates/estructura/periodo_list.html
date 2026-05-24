@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Periodos academicos{% endblock %}
+
+{% block content %}
+<h1>Periodos academicos</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Fecha inicio</th>
+            <th>Fecha final</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for periodo in periodos %}
+            <tr>
+                <td>{{ periodo.id_periodo_academico }}</td>
+                <td>{{ periodo.fecha_inicio }}</td>
+                <td>{{ periodo.fecha_final }}</td>
+                <td>{{ periodo.estado }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No hay periodos registrados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de facultad{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'estructura:facultad_list' %}">Volver a facultades</a></p>
+
+<h1>{{ facultad.nombre_facultad }}</h1>
+
+<dl>
+    <dt>Codigo</dt>
+    <dd>{{ facultad.id_facultad }}</dd>
+    <dt>Ubicacion</dt>
+    <dd>{{ facultad.ubicacion|default:"-" }}</dd>
+    <dt>Correo institucional</dt>
+    <dd>{{ facultad.correo_institucional|default:"-" }}</dd>
+</dl>
+
+<h2>Programas asociados</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Programa</th>
+            <th>Estado</th>
+            <th>Modalidad</th>
+            <th>Nivel</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for programa in facultad.programas.all %}
+            <tr>
+                <td>{{ programa.id_programa_academico }}</td>
+                <td>{{ programa.nombre_programa }}</td>
+                <td>{{ programa.estado }}</td>
+                <td>{{ programa.modalidad }}</td>
+                <td>{{ programa.nivel_formacion }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5">No hay programas asociados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

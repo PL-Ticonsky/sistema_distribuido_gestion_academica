@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Matriculas{% endblock %}
+
+{% block content %}
+<h1>Matriculas</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Programa</th>
+            <th>Periodo</th>
+            <th>Estado matricula</th>
+            <th>Estado pago</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for matricula in matriculas %}
+            <tr>
+                <td>
+                    <a href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
+                        {{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}
+                    </a>
+                </td>
+                <td>
+                    {{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}
+                </td>
+                <td>
+                    {{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}
+                </td>
+                <td>{{ matricula.estado_matricula }}</td>
+                <td>{{ matricula.recibo.estado_pago }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5">No hay matriculas registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

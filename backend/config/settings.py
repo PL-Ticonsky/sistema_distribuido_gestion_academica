@@ -65,13 +65,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="gestion_academica"),
+        "NAME": env("POSTGRES_DB", default="gestion_academica_local"),
         "USER": env("POSTGRES_USER", default="postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", default="postgres"),
         "HOST": env("POSTGRES_HOST", default="localhost"),
         "PORT": env("POSTGRES_PORT", default="5432"),
+        "OPTIONS": {
+            "sslmode": env("POSTGRES_SSLMODE", default="prefer"),
+        },
     }
 }
+
+AUTH_USER_MODEL = "accounts.CustomUser"
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "accounts:dashboard"
+LOGOUT_REDIRECT_URL = "accounts:login"
 
 LANGUAGE_CODE = "es-co"
 TIME_ZONE = "America/Bogota"

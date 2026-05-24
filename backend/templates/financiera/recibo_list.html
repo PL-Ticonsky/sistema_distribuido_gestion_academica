@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Recibos{% endblock %}
+
+{% block content %}
+<h1>Recibos</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Programa</th>
+            <th>Periodo</th>
+            <th>Estado pago</th>
+            <th>Valor matricula</th>
+            <th>Valor pagado</th>
+            <th>Fecha pago</th>
+            <th>Metodo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for recibo in recibos %}
+            <tr>
+                <td>
+                    <a href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">
+                        {{ recibo.estudiante.usuario.nombre|default:recibo.estudiante_id }}
+                    </a>
+                </td>
+                <td>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</td>
+                <td>{{ recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</td>
+                <td>{{ recibo.estado_pago }}</td>
+                <td>{{ recibo.tarifa_matricula.valor_matricula }}</td>
+                <td>{{ recibo.valor_pagado|default:"-" }}</td>
+                <td>{{ recibo.fecha_pago|default:"-" }}</td>
+                <td>{{ recibo.metodo_pago|default:"-" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8">No hay recibos registrados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

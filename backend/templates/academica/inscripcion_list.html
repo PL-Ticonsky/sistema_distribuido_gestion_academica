@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Inscripciones{% endblock %}
+
+{% block content %}
+<h1>Inscripciones</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Periodo</th>
+            <th>Programa</th>
+            <th>Asignatura</th>
+            <th>Grupo</th>
+            <th>Estado</th>
+            <th>Nota final</th>
+            <th>Intento</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for inscripcion in inscripciones %}
+            <tr>
+                <td>
+                    {{ inscripcion.estudiante.usuario.nombre|default:inscripcion.estudiante_id }}
+                </td>
+                <td>{{ inscripcion.grupo.periodo_academico.id_periodo_academico }}</td>
+                <td>
+                    {{ inscripcion.grupo.programa_asignatura.programa_academico.nombre_programa }}
+                </td>
+                <td>{{ inscripcion.grupo.programa_asignatura.asignatura.nombre_asignatura }}</td>
+                <td>
+                    <a href="{% url 'academica:grupo_detail' inscripcion.grupo.id_grupo %}">
+                        {{ inscripcion.grupo.codigo_grupo }}
+                    </a>
+                </td>
+                <td>{{ inscripcion.estado_inscripcion }}</td>
+                <td>{{ inscripcion.nota_final|default:"-" }}</td>
+                <td>{{ inscripcion.intento }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8">No hay inscripciones registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

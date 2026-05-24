@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Prerrequisitos{% endblock %}
+
+{% block content %}
+<h1>Prerrequisitos</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Programa</th>
+            <th>Asignatura</th>
+            <th>Prerrequisito</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for prerrequisito in prerrequisitos %}
+            <tr>
+                <td>{{ prerrequisito.programa_academico.nombre_programa }}</td>
+                <td>
+                    {{ prerrequisito.programa_asignatura.asignatura.nombre_asignatura }}
+                </td>
+                <td>
+                    {{ prerrequisito.programa_asignatura_requisito.asignatura.nombre_asignatura }}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="3">No hay prerrequisitos registrados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
