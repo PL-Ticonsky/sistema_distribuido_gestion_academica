@@ -1,6 +1,6 @@
 # Python / Django
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
 env/
@@ -17,7 +17,8 @@ backend/staticfiles/
 
 # Environment variables
 .env
-.env.local
+.env.*
+!.env.example
 
 # PostgreSQL dumps/backups
 *.dump
