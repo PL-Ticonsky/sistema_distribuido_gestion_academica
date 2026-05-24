@@ -3,22 +3,24 @@
 {% block title %}Iniciar sesion{% endblock %}
 
 {% block content %}
-<h1>Iniciar sesion</h1>
+<h2>Iniciar sesion</h2>
 
 {% if form.errors %}
-    <p>Correo o contrasena invalidos.</p>
+    <div class="alert alert-condor" role="alert">
+        Correo o contrasena invalidos.
+    </div>
 {% endif %}
 
 <form method="post">
     {% csrf_token %}
-    <div>
+    <div class="mb-3">
         {{ form.username.label_tag }}
         {{ form.username }}
     </div>
-    <div>
+    <div class="mb-4">
         {{ form.password.label_tag }}
         {{ form.password }}
     </div>
-    <button type="submit">Entrar</button>
+    <button class="w-100" type="submit">Entrar</button>
 </form>
 {% endblock %}
