@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de auditoria{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'auditoria:auditoria_list' %}">Volver a auditoria</a></p>
+
+<h1>Detalle de auditoria</h1>
+
+<dl>
+    <dt>Usuario</dt>
+    <dd>{{ registro.usuario.nombre|default:registro.usuario_id }}</dd>
+    <dt>Correo del usuario</dt>
+    <dd>{{ registro.usuario.correo|default:"-" }}</dd>
+    <dt>Accion realizada</dt>
+    <dd>{{ registro.accion_realizada }}</dd>
+    <dt>Fecha y hora</dt>
+    <dd>{{ registro.fecha_hora }}</dd>
+    <dt>Descripcion completa</dt>
+    <dd>{{ registro.descripcion|default:"-" }}</dd>
+</dl>
+{% endblock %}

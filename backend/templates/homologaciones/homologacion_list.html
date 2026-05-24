@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Homologaciones{% endblock %}
+
+{% block content %}
+<h1>Homologaciones</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Programa</th>
+            <th>Asignatura origen</th>
+            <th>Institucion origen</th>
+            <th>Asignatura homologada</th>
+            <th>Profesor evaluador</th>
+            <th>Fecha solicitud</th>
+            <th>Estado</th>
+            <th>Nota</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for homologacion in homologaciones %}
+            <tr>
+                <td>
+                    <a href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+                        {{ homologacion.estudiante.usuario.nombre|default:homologacion.estudiante_id }}
+                    </a>
+                </td>
+                <td>{{ homologacion.estudiante.programa_academico.nombre_programa }}</td>
+                <td>{{ homologacion.asignatura_origen }}</td>
+                <td>{{ homologacion.institucion_origen }}</td>
+                <td>{{ homologacion.programa_asignatura.asignatura.nombre_asignatura }}</td>
+                <td>
+                    {{ homologacion.profesor_evaluador.usuario.nombre|default:homologacion.profesor_evaluador_id }}
+                </td>
+                <td>{{ homologacion.fecha_solicitud }}</td>
+                <td>{{ homologacion.estado_homologacion }}</td>
+                <td>{{ homologacion.nota_obtenida|default:"-" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="9">No hay homologaciones registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

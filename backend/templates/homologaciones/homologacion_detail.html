@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de homologacion{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'homologaciones:homologacion_list' %}">Volver a homologaciones</a></p>
+
+<h1>Detalle de homologacion</h1>
+
+<dl>
+    <dt>Estudiante</dt>
+    <dd>{{ homologacion.estudiante.usuario.nombre|default:homologacion.estudiante_id }}</dd>
+    <dt>Correo del estudiante</dt>
+    <dd>{{ homologacion.estudiante.usuario.correo|default:"-" }}</dd>
+    <dt>Programa del estudiante</dt>
+    <dd>{{ homologacion.estudiante.programa_academico.nombre_programa }}</dd>
+    <dt>Asignatura origen</dt>
+    <dd>{{ homologacion.asignatura_origen }}</dd>
+    <dt>Institucion origen</dt>
+    <dd>{{ homologacion.institucion_origen }}</dd>
+    <dt>Asignatura homologada</dt>
+    <dd>{{ homologacion.programa_asignatura.asignatura.nombre_asignatura }}</dd>
+    <dt>Programa de asignatura homologada</dt>
+    <dd>{{ homologacion.programa_asignatura.programa_academico.nombre_programa }}</dd>
+    <dt>Profesor evaluador</dt>
+    <dd>
+        {{ homologacion.profesor_evaluador.usuario.nombre|default:homologacion.profesor_evaluador_id }}
+    </dd>
+    <dt>Fecha de solicitud</dt>
+    <dd>{{ homologacion.fecha_solicitud }}</dd>
+    <dt>Fecha de respuesta</dt>
+    <dd>{{ homologacion.fecha_respuesta|default:"-" }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ homologacion.estado_homologacion }}</dd>
+    <dt>Nota obtenida</dt>
+    <dd>{{ homologacion.nota_obtenida|default:"-" }}</dd>
+    <dt>Observacion</dt>
+    <dd>{{ homologacion.observacion|default:"-" }}</dd>
+</dl>
+{% endblock %}
