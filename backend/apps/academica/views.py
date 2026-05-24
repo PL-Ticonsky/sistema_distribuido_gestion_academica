@@ -4,9 +4,12 @@ from django.views.generic import DetailView, ListView
 
 from apps.academica.models import (
     Asignatura,
+    Coordinador,
+    Decano,
     Grupo,
     Inscripcion,
     PreRequisito,
+    Profesor,
     ProgramaAsignatura,
 )
 
@@ -64,6 +67,72 @@ class PreRequisitoListView(LoginRequiredMixin, ListView):
             "programa_academico__nombre_programa",
             "programa_asignatura__semestre_sugerido",
             "programa_asignatura__asignatura__nombre_asignatura",
+        )
+
+
+class ProfesorListView(LoginRequiredMixin, ListView):
+    model = Profesor
+    template_name = "academica/profesor_list.html"
+    context_object_name = "profesores"
+
+    def get_queryset(self):
+        decanatura_queryset = Decano.objects.select_related(
+            "facultad",
+            "periodo_academico",
+        )
+        coordinacion_queryset = Coordinador.objects.select_related(
+            "programa_academico",
+            "programa_academico__facultad",
+            "periodo_academico",
+        )
+        return (
+            Profesor.objects.select_related("usuario", "facultad")
+            .prefetch_related(
+                Prefetch("decanaturas", queryset=decanatura_queryset),
+                Prefetch("coordinaciones", queryset=coordinacion_queryset),
+            )
+            .annotate(
+                total_grupos=Count("grupos", distinct=True),
+                total_decanaturas=Count("decanaturas", distinct=True),
+                total_coordinaciones=Count("coordinaciones", distinct=True),
+            )
+            .order_by("usuario__nombre")
+        )
+
+
+class ProfesorDetailView(LoginRequiredMixin, DetailView):
+    model = Profesor
+    template_name = "academica/profesor_detail.html"
+    context_object_name = "profesor"
+    pk_url_kwarg = "id_profesor"
+
+    def get_queryset(self):
+        grupo_queryset = Grupo.objects.select_related(
+            "programa_asignatura__asignatura",
+            "programa_asignatura__programa_academico",
+            "periodo_academico",
+        ).order_by(
+            "periodo_academico__id_periodo_academico",
+            "programa_asignatura__programa_academico__nombre_programa",
+            "programa_asignatura__asignatura__nombre_asignatura",
+            "codigo_grupo",
+        )
+        decanatura_queryset = Decano.objects.select_related(
+            "facultad",
+            "periodo_academico",
+        ).order_by("periodo_academico__id_periodo_academico")
+        coordinacion_queryset = Coordinador.objects.select_related(
+            "programa_academico",
+            "programa_academico__facultad",
+            "periodo_academico",
+        ).order_by(
+            "periodo_academico__id_periodo_academico",
+            "programa_academico__nombre_programa",
+        )
+        return Profesor.objects.select_related("usuario", "facultad").prefetch_related(
+            Prefetch("grupos", queryset=grupo_queryset),
+            Prefetch("decanaturas", queryset=decanatura_queryset),
+            Prefetch("coordinaciones", queryset=coordinacion_queryset),
         )
 
 

@@ -156,6 +156,70 @@ class Profesor(models.Model):
         return self.usuario.nombre
 
 
+class Decano(models.Model):
+    id_decano = models.UUIDField(primary_key=True)
+    profesor = models.ForeignKey(
+        Profesor,
+        db_column="id_profesor",
+        on_delete=models.DO_NOTHING,
+        related_name="decanaturas",
+    )
+    periodo_academico = models.ForeignKey(
+        PeriodoAcademico,
+        db_column="id_periodo_academico",
+        on_delete=models.DO_NOTHING,
+        related_name="decanaturas",
+    )
+    facultad = models.ForeignKey(
+        Facultad,
+        db_column="id_facultad",
+        on_delete=models.DO_NOTHING,
+        related_name="decanaturas",
+    )
+
+    class Meta:
+        managed = False
+        db_table = "decano"
+        ordering = ["periodo_academico", "facultad"]
+        verbose_name = "decano"
+        verbose_name_plural = "decanos"
+
+    def __str__(self):
+        return f"{self.profesor} - {self.facultad} - {self.periodo_academico}"
+
+
+class Coordinador(models.Model):
+    id_coordinador = models.UUIDField(primary_key=True)
+    profesor = models.ForeignKey(
+        Profesor,
+        db_column="id_profesor",
+        on_delete=models.DO_NOTHING,
+        related_name="coordinaciones",
+    )
+    periodo_academico = models.ForeignKey(
+        PeriodoAcademico,
+        db_column="id_periodo_academico",
+        on_delete=models.DO_NOTHING,
+        related_name="coordinaciones",
+    )
+    programa_academico = models.ForeignKey(
+        ProgramaAcademico,
+        db_column="id_programa_academico",
+        on_delete=models.DO_NOTHING,
+        related_name="coordinaciones",
+    )
+
+    class Meta:
+        managed = False
+        db_table = "coordinador"
+        ordering = ["periodo_academico", "programa_academico"]
+        verbose_name = "coordinador"
+        verbose_name_plural = "coordinadores"
+
+    def __str__(self):
+        return f"{self.profesor} - {self.programa_academico} - {self.periodo_academico}"
+
+
 class Grupo(models.Model):
     class EstadoGrupo(models.TextChoices):
         ABIERTO = "Abierto", "Abierto"

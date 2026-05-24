@@ -2,9 +2,12 @@ from django.contrib import admin
 
 from apps.academica.models import (
     Asignatura,
+    Coordinador,
+    Decano,
     Grupo,
     Inscripcion,
     PreRequisito,
+    Profesor,
     ProgramaAsignatura,
 )
 
@@ -63,6 +66,37 @@ class PreRequisitoAdmin(SoloLecturaAdminMixin, admin.ModelAdmin):
         "programa_academico",
         "programa_asignatura__asignatura",
         "programa_asignatura_requisito__asignatura",
+    )
+
+
+@admin.register(Profesor)
+class ProfesorAdmin(SoloLecturaAdminMixin, admin.ModelAdmin):
+    list_display = ("usuario", "facultad", "categoria", "vinculacion")
+    list_filter = ("facultad", "categoria", "vinculacion")
+    search_fields = ("usuario__nombre", "usuario__correo", "facultad__nombre_facultad")
+    list_select_related = ("usuario", "facultad")
+
+
+@admin.register(Decano)
+class DecanoAdmin(SoloLecturaAdminMixin, admin.ModelAdmin):
+    list_display = ("profesor", "facultad", "periodo_academico")
+    list_filter = ("facultad", "periodo_academico")
+    search_fields = ("profesor__usuario__nombre", "facultad__nombre_facultad")
+    list_select_related = ("profesor__usuario", "facultad", "periodo_academico")
+
+
+@admin.register(Coordinador)
+class CoordinadorAdmin(SoloLecturaAdminMixin, admin.ModelAdmin):
+    list_display = ("profesor", "programa_academico", "periodo_academico")
+    list_filter = ("programa_academico", "periodo_academico")
+    search_fields = (
+        "profesor__usuario__nombre",
+        "programa_academico__nombre_programa",
+    )
+    list_select_related = (
+        "profesor__usuario",
+        "programa_academico",
+        "periodo_academico",
     )
 
 

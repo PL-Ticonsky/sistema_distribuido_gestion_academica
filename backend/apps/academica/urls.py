@@ -8,6 +8,8 @@ from apps.academica.views import (
     InscripcionListView,
     PlanEstudiosListView,
     PreRequisitoListView,
+    ProfesorDetailView,
+    ProfesorListView,
 )
 
 app_name = "academica"
@@ -21,6 +23,12 @@ urlpatterns = [
     ),
     path("planes/", PlanEstudiosListView.as_view(), name="plan_estudios_list"),
     path("prerrequisitos/", PreRequisitoListView.as_view(), name="prerequisito_list"),
+    path("docentes/", ProfesorListView.as_view(), name="profesor_list"),
+    path(
+        "docentes/<uuid:id_profesor>/",
+        ProfesorDetailView.as_view(),
+        name="profesor_detail",
+    ),
     path("grupos/", GrupoListView.as_view(), name="grupo_list"),
     path("grupos/<uuid:id_grupo>/", GrupoDetailView.as_view(), name="grupo_detail"),
     path("inscripciones/", InscripcionListView.as_view(), name="inscripcion_list"),
