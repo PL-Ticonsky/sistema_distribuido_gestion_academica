@@ -1,0 +1,67 @@
+[project]
+name = "sistema-distribuido-gestion-academica"
+version = "0.1.0"
+description = "Sistema local de gestion academica universitaria con Django y PostgreSQL."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.0,<6.0",
+    "django-environ>=0.11,<1.0",
+    "pillow>=10.0,<12.0",
+    "psycopg[binary]>=3.1,<4.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-debug-toolbar>=5.0,<6.0",
+    "pytest>=8.0,<9.0",
+    "pytest-cov>=5.0,<8.0",
+    "pytest-django>=4.8,<5.0",
+    "ruff>=0.11,<1.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["backend"]
+testpaths = ["backend"]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--strict-markers --strict-config"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["backend"]
+extend-exclude = [
+    "backend/media",
+    "backend/staticfiles",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "DJ",
+]
+ignore = [
+    "DJ008",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# Comandos esperados:
+# uv sync
+# uv run python backend/manage.py check
+# uv run python backend/manage.py migrate
+# uv run python backend/manage.py runserver
+# uv run ruff check .
+# uv run ruff format .
+# uv run pytest

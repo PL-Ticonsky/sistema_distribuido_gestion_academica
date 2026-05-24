@@ -10,6 +10,11 @@ db.sqlite3
 media/
 staticfiles/
 
+backend/media/*
+!backend/media/
+!backend/media/.gitkeep
+backend/staticfiles/
+
 # Environment variables
 .env
 .env.local
@@ -19,6 +24,11 @@ staticfiles/
 *.backup
 *.tar
 *.sql.gz
+
+# Test coverage
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Logs
 *.log
