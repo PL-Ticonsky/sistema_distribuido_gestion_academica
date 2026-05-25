@@ -3,52 +3,49 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h1>Dashboard temporal</h1>
+<h1>Dashboard</h1>
 
 <dl>
     <dt>Nombre</dt>
     <dd>{{ request.user.nombre }}</dd>
     <dt>Correo</dt>
     <dd>{{ request.user.correo }}</dd>
-    <dt>Activo</dt>
-    <dd>{{ request.user.is_active|yesno:"Si,No" }}</dd>
-    <dt>Staff</dt>
-    <dd>{{ request.user.is_staff|yesno:"Si,No" }}</dd>
-    <dt>Superusuario</dt>
-    <dd>{{ request.user.is_superuser|yesno:"Si,No" }}</dd>
+    <dt>Roles funcionales</dt>
+    <dd>
+        {% if role_labels %}
+            {{ role_labels|join:", " }}
+        {% else %}
+            Sin roles funcionales asignados.
+        {% endif %}
+    </dd>
+    <dt>Estado</dt>
+    <dd>{{ request.user.is_active|yesno:"Activo,Inactivo" }}</dd>
 </dl>
 
-<h2>Estructura institucional</h2>
-<ul>
-    <li><a href="{% url 'estructura:facultad_list' %}">Facultades</a></li>
-    <li><a href="{% url 'estructura:programa_list' %}">Programas academicos</a></li>
-    <li><a href="{% url 'estructura:periodo_list' %}">Periodos academicos</a></li>
-</ul>
+<h2>Opciones segun rol</h2>
 
-<h2>Gestion academica</h2>
-<ul>
-    <li><a href="{% url 'academica:asignatura_list' %}">Asignaturas</a></li>
-    <li><a href="{% url 'academica:plan_estudios_list' %}">Planes de estudio</a></li>
-    <li><a href="{% url 'academica:prerequisito_list' %}">Prerrequisitos</a></li>
-    <li><a href="{% url 'academica:profesor_list' %}">Docentes</a></li>
-    <li><a href="{% url 'academica:grupo_list' %}">Grupos academicos</a></li>
-    <li><a href="{% url 'academica:inscripcion_list' %}">Inscripciones</a></li>
-</ul>
+{% if dashboard_options %}
+    <div class="row g-3">
+        {% for option in dashboard_options %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <a class="d-block h-100 border rounded p-3 bg-white" href="{{ option.url }}">
+                    <span class="badge text-bg-primary mb-2">{{ option.role }}</span>
+                    <h3 class="h6 mb-2">{{ option.title }}</h3>
+                    <p class="mb-0">{{ option.description }}</p>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>
+        Este usuario no tiene grupos funcionales asignados todavia. Un administrador
+        puede asignarlos desde Django admin o desde shell.
+    </p>
+{% endif %}
 
-<h2>Gestion financiera</h2>
-<ul>
-    <li><a href="{% url 'financiera:tarifa_list' %}">Tarifas de matricula</a></li>
-    <li><a href="{% url 'financiera:recibo_list' %}">Recibos</a></li>
-    <li><a href="{% url 'financiera:matricula_list' %}">Matriculas</a></li>
-</ul>
-
-<h2>Homologaciones</h2>
-<ul>
-    <li><a href="{% url 'homologaciones:homologacion_list' %}">Solicitudes de homologacion</a></li>
-</ul>
-
-<h2>Auditoria</h2>
-<ul>
-    <li><a href="{% url 'auditoria:auditoria_list' %}">Registros de auditoria</a></li>
-</ul>
+<h2>Alcance de datos</h2>
+<p>
+    Las opciones disponibles filtran los registros segun tus roles funcionales.
+    Entrar a un modulo no implica ver todos los datos del sistema.
+</p>
 {% endblock %}

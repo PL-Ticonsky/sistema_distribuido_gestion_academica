@@ -53,22 +53,51 @@ En Django, las contraseñas no deben guardarse en texto plano. El campo `usuario
 
 ## 5. Recomendación para creación futura de usuarios demo
 
-Más adelante se recomienda crear un comando local de Django llamado:
+El comando local de Django para crear usuarios demo es:
 
 ```text
 seed_demo_users
 ```
 
-Ese comando deberá crear o actualizar usuarios demo usando `set_password()` para que el campo `password` almacene un hash válido de Django.
+Antes de ejecutar `seed_demo_users`, la base local debe tener creadas las tablas auxiliares de autenticación de Django:
 
-El comando también deberá asignar los roles funcionales correspondientes en las tablas de especialización:
+```text
+usuario_groups
+usuario_user_permissions
+```
+
+Estas tablas se crean manualmente con:
+
+```text
+sql/09_auth_user_m2m_tables.sql
+```
+
+Orden recomendado en ambiente local:
+
+```bash
+uv run python backend/manage.py migrate
+```
+
+Luego ejecutar `sql/09_auth_user_m2m_tables.sql` en PostgreSQL mediante DBeaver.
+
+Después:
+
+```bash
+uv run python backend/manage.py setup_functional_groups
+uv run python backend/manage.py seed_demo_users
+```
+
+El comando crea o actualiza usuarios demo usando `set_password()` para que el campo `password` almacene un hash válido de Django.
+
+El comando también asigna los grupos funcionales de Django correspondientes:
 
 ```text
 estudiante
-profesor
-administrativo
+docente
 coordinador
 decano
+administrativo
+superadmin
 ```
 
 Esta recomendación aplica solo para ambiente local. La creación de usuarios reales deberá manejarse mediante flujos seguros de administración y nunca mediante credenciales hardcodeadas.

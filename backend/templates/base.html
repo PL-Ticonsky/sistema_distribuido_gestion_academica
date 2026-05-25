@@ -32,65 +32,81 @@
                         <span>Dashboard</span>
                     </a>
 
-                    <span class="condor-nav-title">Estructura</span>
-                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'estructura' %}active{% endif %}" href="{% url 'estructura:facultad_list' %}">
-                        <i class="bi bi-building"></i>
-                        <span>Facultades</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'estructura:programa_list' %}">
-                        <i class="bi bi-diagram-3"></i>
-                        <span>Programas</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'estructura:periodo_list' %}">
-                        <i class="bi bi-calendar3"></i>
-                        <span>Periodos</span>
-                    </a>
+                    {% if condor_show_structure %}
+                        <span class="condor-nav-title">Estructura</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'estructura' %}active{% endif %}" href="{% url 'estructura:facultad_list' %}">
+                            <i class="bi bi-building"></i>
+                            <span>Facultades</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'estructura:programa_list' %}">
+                            <i class="bi bi-diagram-3"></i>
+                            <span>Programas</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'estructura:periodo_list' %}">
+                            <i class="bi bi-calendar3"></i>
+                            <span>Periodos</span>
+                        </a>
+                    {% endif %}
 
-                    <span class="condor-nav-title">Academica</span>
-                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'academica' %}active{% endif %}" href="{% url 'academica:asignatura_list' %}">
-                        <i class="bi bi-journal-bookmark"></i>
-                        <span>Asignaturas</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'academica:profesor_list' %}">
-                        <i class="bi bi-person-video3"></i>
-                        <span>Docentes</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'academica:plan_estudios_list' %}">
-                        <i class="bi bi-list-check"></i>
-                        <span>Planes</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'academica:grupo_list' %}">
-                        <i class="bi bi-people"></i>
-                        <span>Grupos</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'academica:inscripcion_list' %}">
-                        <i class="bi bi-card-checklist"></i>
-                        <span>Inscripciones</span>
-                    </a>
+                    {% if condor_show_student or condor_show_teacher %}
+                        <span class="condor-nav-title">Academica</span>
+                        {% if condor_show_student %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'academica' %}active{% endif %}" href="{% url 'academica:asignatura_list' %}">
+                                <i class="bi bi-journal-bookmark"></i>
+                                <span>Asignaturas</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:plan_estudios_list' %}">
+                                <i class="bi bi-list-check"></i>
+                                <span>Plan de estudios</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:inscripcion_list' %}">
+                                <i class="bi bi-card-checklist"></i>
+                                <span>Inscripciones</span>
+                            </a>
+                        {% endif %}
+                        {% if condor_show_teacher %}
+                            <a class="condor-nav-link" href="{% url 'academica:profesor_list' %}">
+                                <i class="bi bi-person-video3"></i>
+                                <span>Docentes</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:grupo_list' %}">
+                                <i class="bi bi-people"></i>
+                                <span>Grupos</span>
+                            </a>
+                        {% endif %}
+                    {% endif %}
 
-                    <span class="condor-nav-title">Financiera</span>
-                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'financiera' %}active{% endif %}" href="{% url 'financiera:tarifa_list' %}">
-                        <i class="bi bi-cash-coin"></i>
-                        <span>Tarifas</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'financiera:recibo_list' %}">
-                        <i class="bi bi-receipt"></i>
-                        <span>Recibos</span>
-                    </a>
-                    <a class="condor-nav-link" href="{% url 'financiera:matricula_list' %}">
-                        <i class="bi bi-mortarboard"></i>
-                        <span>Matriculas</span>
-                    </a>
+                    {% if condor_show_financial %}
+                        <span class="condor-nav-title">Financiera</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'financiera' %}active{% endif %}" href="{% url 'financiera:tarifa_list' %}">
+                            <i class="bi bi-cash-coin"></i>
+                            <span>Tarifas</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'financiera:recibo_list' %}">
+                            <i class="bi bi-receipt"></i>
+                            <span>Recibos</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'financiera:matricula_list' %}">
+                            <i class="bi bi-mortarboard"></i>
+                            <span>Matriculas</span>
+                        </a>
+                    {% endif %}
 
-                    <span class="condor-nav-title">Control</span>
-                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
-                        <i class="bi bi-arrow-left-right"></i>
-                        <span>Homologaciones</span>
-                    </a>
-                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
-                        <i class="bi bi-shield-check"></i>
-                        <span>Auditoria</span>
-                    </a>
+                    {% if condor_show_homologation or condor_show_audit %}
+                        <span class="condor-nav-title">Control</span>
+                        {% if condor_show_homologation %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
+                                <i class="bi bi-arrow-left-right"></i>
+                                <span>Homologaciones</span>
+                            </a>
+                        {% endif %}
+                        {% if condor_show_audit %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Auditoria</span>
+                            </a>
+                        {% endif %}
+                    {% endif %}
                 </nav>
             </aside>
 

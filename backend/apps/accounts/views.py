@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 
 from .forms import EmailAuthenticationForm
+from .roles import get_dashboard_options, get_role_labels, get_user_roles
 
 
 class EmailLoginView(LoginView):
@@ -21,4 +22,12 @@ class EmailLogoutView(LogoutView):
 
 @login_required
 def dashboard(request):
-    return render(request, "accounts/dashboard.html")
+    return render(
+        request,
+        "accounts/dashboard.html",
+        {
+            "dashboard_options": get_dashboard_options(request.user),
+            "role_labels": get_role_labels(request.user),
+            "roles": get_user_roles(request.user),
+        },
+    )

@@ -1,8 +1,23 @@
 from django.core.management.base import BaseCommand
 
 from apps.accounts.models import CustomUser
+from apps.accounts.roles import FUNCTIONAL_ROLES
+
+try:
+    from django.contrib.auth.models import Group
+except ImportError:  # pragma: no cover
+    Group = None
 
 DEMO_PASSWORD = "Demo12345*"
+
+ROLE_MAP = {
+    "Administrador funcional": "superadmin",
+    "Estudiante": "estudiante",
+    "Profesor": "docente",
+    "Coordinador": "coordinador",
+    "Decano": "decano",
+    "Administrativo": "administrativo",
+}
 
 DEMO_USERS = [
     {
@@ -66,6 +81,12 @@ class Command(BaseCommand):
     help = "Crea usuarios demo locales con contrasenas hasheadas por Django."
 
     def handle(self, *args, **options):
+        groups = {}
+        if Group is not None:
+            for role in FUNCTIONAL_ROLES:
+                group, _ = Group.objects.get_or_create(name=role)
+                groups[role] = group
+
         for item in DEMO_USERS:
             data = {
                 "is_staff": False,
@@ -81,6 +102,10 @@ class Command(BaseCommand):
             )
             user.set_password(DEMO_PASSWORD)
             user.save()
+
+            group_name = ROLE_MAP[rol]
+            if group_name in groups:
+                user.groups.add(groups[group_name])
 
             action = "creado" if created else "actualizado"
             self.stdout.write(f"{correo} ({rol}) {action}.")
