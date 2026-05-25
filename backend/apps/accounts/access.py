@@ -21,6 +21,13 @@ HOMOLOGATION_ROLES = (
     "decano",
     "superadmin",
 )
+INDICATOR_ROLES = (
+    "estudiante",
+    "docente",
+    "coordinador",
+    "decano",
+    "superadmin",
+)
 AUDIT_ROLES = ("superadmin",)
 
 

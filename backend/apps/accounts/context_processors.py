@@ -22,5 +22,7 @@ def functional_roles(request):
         ),
         "condor_show_homologation": is_superadmin
         or bool(roles.intersection({"estudiante", "docente", "coordinador", "decano"})),
+        "condor_show_indicators": is_superadmin
+        or bool(roles.intersection({"estudiante", "docente", "coordinador", "decano"})),
         "condor_show_audit": is_superadmin,
     }

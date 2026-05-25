@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.academica",
     "apps.financiera",
     "apps.homologaciones",
+    "apps.indicadores",
     "apps.auditoria",
 ]
 

@@ -74,6 +74,11 @@ def get_dashboard_options(user):
                 "description": "Consultar mis solicitudes de homologacion.",
                 "url": reverse("homologaciones:homologacion_list"),
             },
+            {
+                "title": "Mis indicadores",
+                "description": "Revisar avance, promedio y riesgo academico.",
+                "url": reverse("indicadores:mi_indicador"),
+            },
         ],
         "docente": [
             {
@@ -85,6 +90,11 @@ def get_dashboard_options(user):
                 "title": "Perfil docente",
                 "description": "Consultar docentes, asignaturas y cargos academicos.",
                 "url": reverse("academica:profesor_list"),
+            },
+            {
+                "title": "Indicadores de estudiantes",
+                "description": "Consultar indicadores de estudiantes en mis grupos.",
+                "url": reverse("indicadores:indicador_list"),
             },
         ],
         "coordinador": [
@@ -98,6 +108,11 @@ def get_dashboard_options(user):
                 "description": "Consultar grupos, asignaturas y prerrequisitos.",
                 "url": reverse("academica:grupo_list"),
             },
+            {
+                "title": "Indicadores del programa",
+                "description": "Consultar avance y riesgo de estudiantes del programa.",
+                "url": reverse("indicadores:indicador_list"),
+            },
         ],
         "decano": [
             {
@@ -109,6 +124,13 @@ def get_dashboard_options(user):
                 "title": "Docentes",
                 "description": "Consultar docentes, grupos y cargos academicos.",
                 "url": reverse("academica:profesor_list"),
+            },
+            {
+                "title": "Indicadores de facultad",
+                "description": (
+                    "Consultar avance y riesgo de estudiantes de la facultad."
+                ),
+                "url": reverse("indicadores:indicador_list"),
             },
         ],
         "administrativo": [
