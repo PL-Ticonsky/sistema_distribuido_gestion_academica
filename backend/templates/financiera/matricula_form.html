@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Crear matricula{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:matricula_list' %}">Volver a matriculas</a></p>
+
+<h1>Crear matricula</h1>
+
+<form method="post" class="mt-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+        <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Crear matricula</button>
+</form>
+{% endblock %}

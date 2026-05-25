@@ -3,9 +3,17 @@
 {% block title %}Homologaciones{% endblock %}
 
 {% block content %}
-<h1>Homologaciones</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Homologaciones</h1>
+    {% if can_create_homologacion %}
+        <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Solicitar homologacion
+        </a>
+    {% endif %}
+</div>
 
-<table>
+<table class="table table-hover align-middle">
     <thead>
         <tr>
             <th>Estudiante</th>
@@ -17,6 +25,7 @@
             <th>Fecha solicitud</th>
             <th>Estado</th>
             <th>Nota</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -37,10 +46,15 @@
                 <td>{{ homologacion.fecha_solicitud }}</td>
                 <td>{{ homologacion.estado_homologacion }}</td>
                 <td>{{ homologacion.nota_obtenida|default:"-" }}</td>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+                        Ver
+                    </a>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="9">No hay homologaciones registradas.</td>
+                <td colspan="10">No hay homologaciones registradas.</td>
             </tr>
         {% endfor %}
     </tbody>

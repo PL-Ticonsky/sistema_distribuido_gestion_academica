@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Crear inscripcion{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:inscripcion_list' %}">Volver a inscripciones</a></p>
+
+<h1>Crear inscripcion</h1>
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if not form.estudiante.is_hidden %}
+        <div class="mb-3">
+            {{ form.estudiante.label_tag }}
+            {{ form.estudiante }}
+            {{ form.estudiante.errors }}
+        </div>
+    {% else %}
+        {{ form.estudiante }}
+    {% endif %}
+
+    <div class="mb-3">
+        {{ form.grupo.label_tag }}
+        {{ form.grupo }}
+        {{ form.grupo.errors }}
+    </div>
+
+    <button type="submit">Guardar inscripcion</button>
+</form>
+{% endblock %}

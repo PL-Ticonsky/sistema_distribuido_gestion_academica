@@ -3,9 +3,17 @@
 {% block title %}Matriculas{% endblock %}
 
 {% block content %}
-<h1>Matriculas</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Matriculas</h1>
+    {% if can_manage_financial %}
+        <a class="btn btn-primary" href="{% url 'financiera:matricula_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Crear matricula
+        </a>
+    {% endif %}
+</div>
 
-<table>
+<table class="table table-hover align-middle">
     <thead>
         <tr>
             <th>Estudiante</th>
@@ -13,6 +21,9 @@
             <th>Periodo</th>
             <th>Estado matricula</th>
             <th>Estado pago</th>
+            {% if can_manage_financial %}
+                <th>Acciones</th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>
@@ -31,10 +42,19 @@
                 </td>
                 <td>{{ matricula.estado_matricula }}</td>
                 <td>{{ matricula.recibo.estado_pago }}</td>
+                {% if can_manage_financial %}
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
+                            Gestionar
+                        </a>
+                    </td>
+                {% endif %}
             </tr>
         {% empty %}
             <tr>
-                <td colspan="5">No hay matriculas registradas.</td>
+                <td colspan="{% if can_manage_financial %}6{% else %}5{% endif %}">
+                    No hay matriculas registradas.
+                </td>
             </tr>
         {% endfor %}
     </tbody>

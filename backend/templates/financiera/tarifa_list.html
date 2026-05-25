@@ -3,9 +3,17 @@
 {% block title %}Tarifas de matricula{% endblock %}
 
 {% block content %}
-<h1>Tarifas de matricula</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Tarifas de matricula</h1>
+    {% if can_manage_financial %}
+        <a class="btn btn-primary" href="{% url 'financiera:tarifa_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Crear tarifa
+        </a>
+    {% endif %}
+</div>
 
-<table>
+<table class="table table-hover align-middle">
     <thead>
         <tr>
             <th>Programa</th>
@@ -15,6 +23,9 @@
             <th>Limite ordinaria</th>
             <th>Limite extraordinaria</th>
             <th>Estado</th>
+            {% if can_manage_financial %}
+                <th>Acciones</th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>
@@ -27,10 +38,25 @@
                 <td>{{ tarifa.fecha_limite_ordinaria }}</td>
                 <td>{{ tarifa.fecha_limite_extraordinaria }}</td>
                 <td>{{ tarifa.estado }}</td>
+                {% if can_manage_financial %}
+                    <td class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:tarifa_update' tarifa.id_tarifa_matricula %}">
+                            Editar
+                        </a>
+                        <form method="post" action="{% url 'financiera:tarifa_toggle_estado' tarifa.id_tarifa_matricula %}">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                Cambiar estado
+                            </button>
+                        </form>
+                    </td>
+                {% endif %}
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7">No hay tarifas registradas.</td>
+                <td colspan="{% if can_manage_financial %}8{% else %}7{% endif %}">
+                    No hay tarifas registradas.
+                </td>
             </tr>
         {% endfor %}
     </tbody>

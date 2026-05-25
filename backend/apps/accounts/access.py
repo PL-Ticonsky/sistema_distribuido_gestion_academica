@@ -5,7 +5,13 @@ from django.shortcuts import redirect
 from apps.accounts.roles import get_role_labels, get_user_roles
 
 STRUCTURE_ROLES = ("coordinador", "decano", "superadmin")
-FINANCIAL_ROLES = ("estudiante", "administrativo", "superadmin")
+FINANCIAL_ROLES = (
+    "estudiante",
+    "coordinador",
+    "decano",
+    "administrativo",
+    "superadmin",
+)
 STUDENT_ROLES = ("estudiante", "coordinador", "decano", "superadmin")
 TEACHING_ROLES = ("docente", "coordinador", "decano", "superadmin")
 HOMOLOGATION_ROLES = (

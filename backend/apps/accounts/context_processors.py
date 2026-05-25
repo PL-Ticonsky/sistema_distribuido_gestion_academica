@@ -15,7 +15,11 @@ def functional_roles(request):
         "condor_show_teacher": is_superadmin
         or bool(roles.intersection({"docente", "coordinador", "decano"})),
         "condor_show_financial": is_superadmin
-        or bool(roles.intersection({"estudiante", "administrativo"})),
+        or bool(
+            roles.intersection(
+                {"estudiante", "coordinador", "decano", "administrativo"},
+            ),
+        ),
         "condor_show_homologation": is_superadmin
         or bool(roles.intersection({"estudiante", "docente", "coordinador", "decano"})),
         "condor_show_audit": is_superadmin,

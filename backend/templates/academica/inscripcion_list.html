@@ -5,6 +5,18 @@
 {% block content %}
 <h1>Inscripciones</h1>
 
+{% if can_create_inscripcion %}
+    <p>
+        <a href="{% url 'academica:inscripcion_create' %}">
+            {% if "estudiante" in condor_roles and not condor_is_superadmin %}
+                Inscribirme
+            {% else %}
+                Crear inscripcion
+            {% endif %}
+        </a>
+    </p>
+{% endif %}
+
 <table>
     <thead>
         <tr>
@@ -16,6 +28,11 @@
             <th>Estado</th>
             <th>Nota final</th>
             <th>Intento</th>
+            {% if can_cancel_inscripcion %}
+                <th>Acciones</th>
+            {% elif can_edit_grades %}
+                <th>Notas</th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>
@@ -37,10 +54,36 @@
                 <td>{{ inscripcion.estado_inscripcion }}</td>
                 <td>{{ inscripcion.nota_final|default:"-" }}</td>
                 <td>{{ inscripcion.intento }}</td>
+                {% if can_cancel_inscripcion %}
+                    <td>
+                        {% if inscripcion.estado_inscripcion != "Cancelada" %}
+                            <form method="post" action="{% url 'academica:inscripcion_cancel' inscripcion.id_inscripcion %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    Cancelar
+                                </button>
+                            </form>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                {% elif can_edit_grades %}
+                    <td>
+                        {% if inscripcion.estado_inscripcion != "Cancelada" %}
+                            <a href="{% url 'academica:nota_update' inscripcion.id_inscripcion %}">
+                                Editar notas
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                {% endif %}
             </tr>
         {% empty %}
             <tr>
-                <td colspan="8">No hay inscripciones registradas.</td>
+                <td colspan="{% if can_cancel_inscripcion or can_edit_grades %}9{% else %}8{% endif %}">
+                    No hay inscripciones registradas.
+                </td>
             </tr>
         {% endfor %}
     </tbody>

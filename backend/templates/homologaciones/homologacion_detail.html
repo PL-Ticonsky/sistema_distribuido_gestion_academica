@@ -5,9 +5,29 @@
 {% block content %}
 <p><a href="{% url 'homologaciones:homologacion_list' %}">Volver a homologaciones</a></p>
 
-<h1>Detalle de homologacion</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Detalle de homologacion</h1>
+    <div class="d-flex flex-wrap gap-2">
+        {% if can_assign_evaluator %}
+            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
+                Asignar evaluador
+            </a>
+        {% endif %}
+        {% if can_evaluate_homologacion %}
+            <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
+                Evaluar
+            </a>
+        {% endif %}
+        {% if can_cancel_homologacion %}
+            <form method="post" action="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger" type="submit">Cancelar solicitud</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
 
-<dl>
+<dl class="row">
     <dt>Estudiante</dt>
     <dd>{{ homologacion.estudiante.usuario.nombre|default:homologacion.estudiante_id }}</dd>
     <dt>Correo del estudiante</dt>
