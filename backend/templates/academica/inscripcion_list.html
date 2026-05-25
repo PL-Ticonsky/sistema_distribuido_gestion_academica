@@ -3,89 +3,98 @@
 {% block title %}Inscripciones{% endblock %}
 
 {% block content %}
-<h1>Inscripciones</h1>
-
-{% if can_create_inscripcion %}
-    <p>
-        <a href="{% url 'academica:inscripcion_create' %}">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Inscripciones</h1>
+        <p class="mb-0">Consulta materias, estados, intentos y notas finales segun tu alcance.</p>
+    </div>
+    {% if can_create_inscripcion %}
+        <a class="btn btn-primary" href="{% url 'academica:inscripcion_create' %}">
+            <i class="bi bi-plus-circle"></i>
             {% if "estudiante" in condor_roles and not condor_is_superadmin %}
                 Inscribirme
             {% else %}
                 Crear inscripcion
             {% endif %}
         </a>
-    </p>
-{% endif %}
+    {% endif %}
+</div>
 
-<table>
-    <thead>
-        <tr>
-            <th>Estudiante</th>
-            <th>Periodo</th>
-            <th>Programa</th>
-            <th>Asignatura</th>
-            <th>Grupo</th>
-            <th>Estado</th>
-            <th>Nota final</th>
-            <th>Intento</th>
-            {% if can_cancel_inscripcion %}
-                <th>Acciones</th>
-            {% elif can_edit_grades %}
-                <th>Notas</th>
-            {% endif %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for inscripcion in inscripciones %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
             <tr>
-                <td>
-                    {{ inscripcion.estudiante.usuario.nombre|default:inscripcion.estudiante_id }}
-                </td>
-                <td>{{ inscripcion.grupo.periodo_academico.id_periodo_academico }}</td>
-                <td>
-                    {{ inscripcion.grupo.programa_asignatura.programa_academico.nombre_programa }}
-                </td>
-                <td>{{ inscripcion.grupo.programa_asignatura.asignatura.nombre_asignatura }}</td>
-                <td>
-                    <a href="{% url 'academica:grupo_detail' inscripcion.grupo.id_grupo %}">
-                        {{ inscripcion.grupo.codigo_grupo }}
-                    </a>
-                </td>
-                <td>{{ inscripcion.estado_inscripcion }}</td>
-                <td>{{ inscripcion.nota_final|default:"-" }}</td>
-                <td>{{ inscripcion.intento }}</td>
+                <th>Estudiante</th>
+                <th>Periodo</th>
+                <th>Programa</th>
+                <th>Asignatura</th>
+                <th>Grupo</th>
+                <th>Estado</th>
+                <th>Nota final</th>
+                <th>Intento</th>
                 {% if can_cancel_inscripcion %}
-                    <td>
-                        {% if inscripcion.estado_inscripcion != "Cancelada" %}
-                            <form method="post" action="{% url 'academica:inscripcion_cancel' inscripcion.id_inscripcion %}">
-                                {% csrf_token %}
-                                <button class="btn btn-sm btn-outline-danger" type="submit">
-                                    Cancelar
-                                </button>
-                            </form>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
+                    <th>Acciones</th>
                 {% elif can_edit_grades %}
-                    <td>
-                        {% if inscripcion.estado_inscripcion != "Cancelada" %}
-                            <a href="{% url 'academica:nota_update' inscripcion.id_inscripcion %}">
-                                Editar notas
-                            </a>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
+                    <th>Notas</th>
                 {% endif %}
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="{% if can_cancel_inscripcion or can_edit_grades %}9{% else %}8{% endif %}">
-                    No hay inscripciones registradas.
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            {% for inscripcion in inscripciones %}
+                <tr>
+                    <td>
+                        {{ inscripcion.estudiante.usuario.nombre|default:inscripcion.estudiante_id }}
+                    </td>
+                    <td>{{ inscripcion.grupo.periodo_academico.id_periodo_academico }}</td>
+                    <td>
+                        {{ inscripcion.grupo.programa_asignatura.programa_academico.nombre_programa }}
+                    </td>
+                    <td>{{ inscripcion.grupo.programa_asignatura.asignatura.nombre_asignatura }}</td>
+                    <td>
+                        <a href="{% url 'academica:grupo_detail' inscripcion.grupo.id_grupo %}">
+                            {{ inscripcion.grupo.codigo_grupo }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="condor-status {% if inscripcion.estado_inscripcion == 'Aprobada' %}is-success{% elif inscripcion.estado_inscripcion == 'Reprobada' or inscripcion.estado_inscripcion == 'Cancelada' %}is-danger{% elif inscripcion.estado_inscripcion == 'Cursando' %}is-info{% else %}is-muted{% endif %}">
+                            {{ inscripcion.estado_inscripcion }}
+                        </span>
+                    </td>
+                    <td>{{ inscripcion.nota_final|default:"-" }}</td>
+                    <td>{{ inscripcion.intento }}</td>
+                    {% if can_cancel_inscripcion %}
+                        <td>
+                            {% if inscripcion.estado_inscripcion != "Cancelada" %}
+                                <form method="post" action="{% url 'academica:inscripcion_cancel' inscripcion.id_inscripcion %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% elif can_edit_grades %}
+                        <td>
+                            {% if inscripcion.estado_inscripcion != "Cancelada" %}
+                                <a class="btn btn-sm btn-outline-primary" href="{% url 'academica:nota_update' inscripcion.id_inscripcion %}">
+                                    Editar notas
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{% if can_cancel_inscripcion or can_edit_grades %}9{% else %}8{% endif %}">
+                        No hay inscripciones registradas.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

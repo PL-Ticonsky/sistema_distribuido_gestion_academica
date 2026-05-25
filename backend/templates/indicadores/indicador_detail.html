@@ -26,63 +26,63 @@
 
 <div class="row g-3">
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Avance academico</div>
-            <div class="fs-2 fw-bold">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Avance academico</div>
+            <div class="condor-metric-value">
                 {% if indicador.academic_progress is not None %}
                     {{ indicador.academic_progress }}%
                 {% else %}
                     Sin datos
                 {% endif %}
             </div>
-            <div class="text-muted">Materias aprobadas sobre el total del programa.</div>
+            <div class="condor-metric-help">Materias aprobadas sobre el total del programa.</div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Materias aprobadas</div>
-            <div class="fs-2 fw-bold">{{ indicador.approved_subjects }}</div>
-            <div class="text-muted">Incluye inscripciones aprobadas y homologaciones aprobadas sin duplicar asignaturas.</div>
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Materias aprobadas</div>
+            <div class="condor-metric-value">{{ indicador.approved_subjects }}</div>
+            <div class="condor-metric-help">Incluye inscripciones y homologaciones aprobadas sin duplicar asignaturas.</div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Materias faltantes</div>
-            <div class="fs-2 fw-bold">{{ indicador.missing_subjects }}</div>
-            <div class="text-muted">Calculadas contra el plan de estudios activo.</div>
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Materias faltantes</div>
+            <div class="condor-metric-value">{{ indicador.missing_subjects }}</div>
+            <div class="condor-metric-help">Calculadas contra el plan de estudios activo.</div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Promedio acumulado</div>
-            <div class="fs-2 fw-bold">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Promedio acumulado</div>
+            <div class="condor-metric-value">
                 {% if indicador.weighted_average is not None %}
                     {{ indicador.weighted_average }}
                 {% else %}
                     Sin datos
                 {% endif %}
             </div>
-            <div class="text-muted">Promedio ponderado por creditos.</div>
+            <div class="condor-metric-help">Promedio ponderado por creditos.</div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Rendimiento academico</div>
-            <div class="fs-2 fw-bold">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Rendimiento academico</div>
+            <div class="condor-metric-value">
                 {% if indicador.performance_percentage is not None %}
                     {{ indicador.performance_percentage }}%
                 {% else %}
                     Sin datos
                 {% endif %}
             </div>
-            <div class="text-muted">Promedio ponderado convertido a porcentaje sobre 5.0.</div>
+            <div class="condor-metric-help">Promedio ponderado convertido a porcentaje sobre 5.0.</div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="border rounded-2 p-3 h-100">
-            <div class="text-muted small">Riesgo de desercion</div>
-            <div class="fs-2 fw-bold">{{ indicador.risk_score }}%</div>
-            <div class="text-muted">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Riesgo de desercion</div>
+            <div class="condor-metric-value">{{ indicador.risk_score }}%</div>
+            <div class="condor-metric-help">
                 Clasificacion {{ indicador.risk_label }}.
                 Reprobadas: {{ indicador.failed_subjects }}.
                 Intento alto: {% if indicador.has_high_attempt %}si{% else %}no{% endif %}.

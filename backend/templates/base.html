@@ -11,19 +11,39 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/condor.css' %}">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("condor.sidebar") === "collapsed") {
+                    document.documentElement.classList.add("condor-sidebar-pref-collapsed");
+                }
+            } catch (error) {
+                document.documentElement.classList.remove("condor-sidebar-pref-collapsed");
+            }
+        })();
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     {% if request.user.is_authenticated %}
+        <button class="condor-mobile-toggle" type="button" data-condor-sidebar-toggle aria-label="Mostrar u ocultar menu lateral" aria-expanded="false">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="condor-sidebar-backdrop" data-condor-sidebar-backdrop></div>
         <div class="condor-shell">
             <aside class="condor-sidebar">
-                <a class="condor-brand" href="{% url 'accounts:dashboard' %}">
-                    <span class="condor-brand-mark">C2</span>
-                    <span>
-                        <span class="condor-brand-name">CONDOR 2</span>
-                        <span class="condor-brand-caption">ERP Academico</span>
-                    </span>
-                </a>
+                <div class="condor-sidebar-header">
+                    <a class="condor-brand" href="{% url 'accounts:dashboard' %}">
+                        <span class="condor-brand-mark">C2</span>
+                        <span class="condor-brand-copy">
+                            <span class="condor-brand-name">CONDOR 2</span>
+                            <span class="condor-brand-caption">Gestion academica</span>
+                        </span>
+                    </a>
+                    <button class="condor-collapse-btn" type="button" data-condor-sidebar-toggle aria-label="Contraer o expandir menu lateral" aria-expanded="true">
+                        <i class="bi bi-layout-sidebar-inset"></i>
+                    </button>
+                </div>
 
                 <nav class="condor-nav" aria-label="Navegacion principal">
                     <span class="condor-nav-title">Principal</span>
@@ -128,16 +148,28 @@
 
             <div class="condor-main">
                 <header class="condor-topbar">
-                    <div>
-                        <div class="condor-breadcrumb">
-                            <a href="{% url 'accounts:dashboard' %}">CONDOR 2</a>
-                            <span>/</span>
-                            <span>{{ request.resolver_match.app_name|default:"dashboard"|title }}</span>
+                    <div class="condor-topbar-left">
+                        <button class="condor-topbar-toggle" type="button" data-condor-sidebar-toggle aria-label="Mostrar u ocultar menu lateral" aria-expanded="true">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        <div>
+                            <div class="condor-breadcrumb">
+                                <a href="{% url 'accounts:dashboard' %}">CONDOR 2</a>
+                                <span>/</span>
+                                <span>{{ request.resolver_match.app_name|default:"dashboard"|title }}</span>
+                            </div>
+                            <div class="condor-topbar-title">{% block page_title %}Sistema de gestion academica{% endblock %}</div>
                         </div>
-                        <div class="condor-topbar-title">{% block page_title %}Sistema de gestion academica{% endblock %}</div>
                     </div>
 
                     <div class="condor-user-area">
+                        <div class="condor-role-strip" aria-label="Roles activos">
+                            {% for role in condor_roles %}
+                                <span class="condor-role-pill">{{ role|title }}</span>
+                            {% empty %}
+                                <span class="condor-role-pill muted">Sin rol</span>
+                            {% endfor %}
+                        </div>
                         <div class="condor-user">
                             <span class="condor-avatar">{{ request.user.nombre|default:request.user.correo|first|upper }}</span>
                             <span>
@@ -147,7 +179,7 @@
                         </div>
                         <form method="post" action="{% url 'accounts:logout' %}">
                             {% csrf_token %}
-                            <button class="btn btn-outline-light btn-sm" type="submit">
+                            <button class="btn btn-outline-primary btn-sm condor-logout-btn" type="submit">
                                 <i class="bi bi-box-arrow-right"></i>
                                 Cerrar sesion
                             </button>
@@ -159,16 +191,17 @@
                     {% if messages %}
                         <div class="condor-messages">
                             {% for message in messages %}
-                                <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                                <div class="alert condor-alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
                                     {{ message }}
                                 </div>
                             {% endfor %}
                         </div>
                     {% endif %}
 
-                    <section class="condor-card">
+                    <section class="condor-page-surface">
     {% else %}
         <main class="condor-auth">
+            <div class="condor-auth-ambient" aria-hidden="true"></div>
             <section class="condor-auth-card">
                 <div class="condor-auth-brand">
                     <span class="condor-brand-mark">C2</span>
@@ -197,6 +230,7 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/condor.js' %}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

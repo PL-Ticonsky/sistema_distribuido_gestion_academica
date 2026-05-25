@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="mb-0">Homologaciones</h1>
+    <div>
+        <h1 class="mb-1">Homologaciones</h1>
+        <p class="mb-0">Solicitudes, evaluadores y decisiones academicas por alcance.</p>
+    </div>
     {% if can_create_homologacion %}
         <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_create' %}">
             <i class="bi bi-plus-circle"></i>
@@ -13,6 +16,7 @@
     {% endif %}
 </div>
 
+<div class="table-responsive">
 <table class="table table-hover align-middle">
     <thead>
         <tr>
@@ -44,7 +48,11 @@
                     {{ homologacion.profesor_evaluador.usuario.nombre|default:homologacion.profesor_evaluador_id }}
                 </td>
                 <td>{{ homologacion.fecha_solicitud }}</td>
-                <td>{{ homologacion.estado_homologacion }}</td>
+                <td>
+                    <span class="condor-status {% if homologacion.estado_homologacion == 'Aprobada' %}is-success{% elif homologacion.estado_homologacion == 'Rechazada' or homologacion.estado_homologacion == 'Cancelada' %}is-danger{% elif homologacion.estado_homologacion == 'En revision' %}is-warning{% else %}is-info{% endif %}">
+                        {{ homologacion.estado_homologacion }}
+                    </span>
+                </td>
                 <td>{{ homologacion.nota_obtenida|default:"-" }}</td>
                 <td>
                     <a class="btn btn-sm btn-outline-primary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
@@ -59,4 +67,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}
