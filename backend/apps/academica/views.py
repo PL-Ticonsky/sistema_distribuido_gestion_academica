@@ -6,8 +6,11 @@ from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, View
 
 from apps.academica.forms import (
+    DEMO_STUDENT_PASSWORD,
+    EstudianteCreateForm,
     InscripcionCreateForm,
     NotaInscripcionForm,
+    user_can_create_students,
     user_can_write_enrollments,
 )
 from apps.academica.models import (
@@ -331,6 +334,36 @@ class InscripcionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         )
         context["can_edit_grades"] = user_can_edit_grades(self.request.user)
         return context
+
+
+class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
+    allowed_roles = ("coordinador", "superadmin")
+    form_class = EstudianteCreateForm
+    template_name = "academica/estudiante_form.html"
+    success_url = reverse_lazy("accounts:dashboard")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not user_can_create_students(request.user):
+            messages.error(request, "No tienes permisos para agregar estudiantes.")
+            return redirect("accounts:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        student = form.save()
+        messages.success(
+            self.request,
+            (
+                "Estudiante creado correctamente. "
+                f"Correo: {student.usuario.correo}. "
+                f"Contrasena demo: {DEMO_STUDENT_PASSWORD}."
+            ),
+        )
+        return super().form_valid(form)
 
 
 class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):

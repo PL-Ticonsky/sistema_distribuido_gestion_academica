@@ -3,6 +3,7 @@ from django.urls import path
 from apps.academica.views import (
     AsignaturaDetailView,
     AsignaturaListView,
+    EstudianteCreateView,
     GrupoDetailView,
     GrupoListView,
     InscripcionCancelView,
@@ -29,6 +30,11 @@ urlpatterns = [
     path("planes/", PlanEstudiosListView.as_view(), name="plan_estudios_list"),
     path("prerrequisitos/", PreRequisitoListView.as_view(), name="prerequisito_list"),
     path("docentes/", ProfesorListView.as_view(), name="profesor_list"),
+    path(
+        "estudiantes/agregar/",
+        EstudianteCreateView.as_view(),
+        name="estudiante_create",
+    ),
     path(
         "docentes/<uuid:id_profesor>/",
         ProfesorDetailView.as_view(),

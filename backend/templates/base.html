@@ -83,6 +83,12 @@
                                 <i class="bi bi-card-checklist"></i>
                                 <span>Inscripciones</span>
                             </a>
+                            {% if "coordinador" in condor_roles or condor_is_superadmin %}
+                                <a class="condor-nav-link" href="{% url 'academica:estudiante_create' %}">
+                                    <i class="bi bi-person-plus"></i>
+                                    <span>Agregar estudiante</span>
+                                </a>
+                            {% endif %}
                             {% if "estudiante" in condor_roles %}
                                 <a class="condor-nav-link {% if request.resolver_match.app_name == 'indicadores' %}active{% endif %}" href="{% url 'indicadores:mi_indicador' %}">
                                     <i class="bi bi-graph-up-arrow"></i>

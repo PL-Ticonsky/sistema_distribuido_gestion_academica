@@ -20,6 +20,7 @@ La documentación se construyó a partir del documento base del proyecto: **Sist
 | `08_claves_y_distribucion.md` | Criterios de claves primarias y distribución preliminar. |
 | `09_decisiones_para_django_y_codex.md` | Decisiones iniciales para preparar la futura implementación local en Django. |
 | `10_prompt_base_para_codex.md` | Prompt base para entregar contexto a Codex antes de programar. |
+| `21_seguridad_vistas_distribucion.md` | Documentación formal de seguridad, vistas normales, vistas materializadas y estrategia de distribución de la base de datos. |
 
 ## Nota de trabajo
 

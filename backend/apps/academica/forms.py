@@ -1,27 +1,137 @@
 import uuid
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Max
 
 from apps.academica.models import Estudiante, Grupo, Inscripcion
+from apps.accounts.models import CustomUser
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import (
+    get_coordinated_program_ids,
     get_student_for_user,
     get_visible_group_ids,
     get_visible_student_ids,
     is_superadmin,
 )
+from apps.estructura.models import ProgramaAcademico
 from apps.financiera.models import Matricula
 
 ACTIVE_GROUP_STATES = ("Abierto", "En curso")
 ACTIVE_ENROLLMENT_STATES = ("Cursando", "Aprobada", "Reprobada")
 WRITE_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
+DEMO_STUDENT_PASSWORD = "Demo12345*"
+STUDENT_STATUS_CHOICES = (
+    ("Activo", "Activo"),
+    ("Inactivo", "Inactivo"),
+    ("Suspendido", "Suspendido"),
+    ("Retirado", "Retirado"),
+    ("Egresado", "Egresado"),
+)
 
 
 def user_can_write_enrollments(user):
     roles = set(get_user_roles(user))
     return is_superadmin(user) or bool(roles.intersection(WRITE_ROLES))
+
+
+def user_can_create_students(user):
+    roles = set(get_user_roles(user))
+    return is_superadmin(user) or "coordinador" in roles
+
+
+class EstudianteCreateForm(forms.Form):
+    nombre = forms.CharField(label="Nombre completo", max_length=80)
+    correo = forms.EmailField(label="Correo institucional", max_length=254)
+    tipo_de_documento = forms.ChoiceField(
+        label="Tipo de documento",
+        choices=CustomUser.TipoDocumento.choices,
+    )
+    numero_de_documento = forms.CharField(label="Numero de documento", max_length=20)
+    direccion = forms.CharField(label="Direccion", max_length=120, required=False)
+    programa_academico = forms.ModelChoiceField(
+        label="Programa academico",
+        queryset=ProgramaAcademico.objects.none(),
+    )
+    limite_matriculas = forms.IntegerField(
+        label="Limite de matriculas",
+        min_value=1,
+        initial=15,
+    )
+    estado_estudiante = forms.ChoiceField(
+        label="Estado del estudiante",
+        choices=STUDENT_STATUS_CHOICES,
+        initial="Activo",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        program_queryset = ProgramaAcademico.objects.select_related("facultad").filter(
+            estado="Activo",
+        )
+        if not is_superadmin(user):
+            program_queryset = program_queryset.filter(
+                id_programa_academico__in=get_coordinated_program_ids(user),
+            )
+        self.fields["programa_academico"].queryset = program_queryset.order_by(
+            "nombre_programa",
+        )
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+    def clean_correo(self):
+        correo = CustomUser.objects.normalize_email(self.cleaned_data["correo"])
+        if CustomUser.objects.filter(correo__iexact=correo).exists():
+            raise ValidationError("Ya existe un usuario registrado con este correo.")
+        return correo
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo_de_documento = cleaned_data.get("tipo_de_documento")
+        numero_de_documento = cleaned_data.get("numero_de_documento")
+        program = cleaned_data.get("programa_academico")
+
+        if not user_can_create_students(self.user):
+            raise ValidationError("No tienes permisos para agregar estudiantes.")
+
+        if tipo_de_documento and numero_de_documento:
+            if CustomUser.objects.filter(
+                tipo_de_documento=tipo_de_documento,
+                numero_de_documento=numero_de_documento,
+            ).exists():
+                raise ValidationError(
+                    "Ya existe un usuario con este tipo y numero de documento.",
+                )
+
+        if program and program not in self.fields["programa_academico"].queryset:
+            raise ValidationError("El programa seleccionado esta fuera de tu alcance.")
+
+        return cleaned_data
+
+    @transaction.atomic
+    def save(self):
+        user = CustomUser.objects.create_user(
+            correo=self.cleaned_data["correo"],
+            password=DEMO_STUDENT_PASSWORD,
+            nombre=self.cleaned_data["nombre"],
+            tipo_de_documento=self.cleaned_data["tipo_de_documento"],
+            numero_de_documento=self.cleaned_data["numero_de_documento"],
+            direccion=self.cleaned_data.get("direccion") or None,
+            is_active=True,
+        )
+        student_group, _ = Group.objects.get_or_create(name="estudiante")
+        user.groups.add(student_group)
+
+        return Estudiante.objects.create(
+            id_estudiante=uuid.uuid4(),
+            usuario=user,
+            programa_academico=self.cleaned_data["programa_academico"],
+            limite_matriculas=self.cleaned_data["limite_matriculas"],
+            estado_estudiante=self.cleaned_data["estado_estudiante"],
+        )
 
 
 class InscripcionCreateForm(forms.Form):
