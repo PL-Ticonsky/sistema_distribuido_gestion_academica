@@ -10,6 +10,7 @@ from apps.estructura.views import (
 app_name = "estructura"
 
 urlpatterns = [
+    path("", FacultadListView.as_view(), name="index"),
     path("facultades/", FacultadListView.as_view(), name="facultad_list"),
     path(
         "facultades/<str:id_facultad>/",

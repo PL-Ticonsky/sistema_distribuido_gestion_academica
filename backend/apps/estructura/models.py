@@ -3,8 +3,8 @@ from django.db import models
 
 class Facultad(models.Model):
     id_facultad = models.CharField(max_length=10, primary_key=True)
-    nombre_facultad = models.CharField(max_length=80)
-    ubicacion = models.CharField(max_length=80, blank=True, null=True)  # noqa: DJ001
+    nombre_facultad = models.CharField(max_length=100)
+    ubicacion = models.CharField(max_length=100, blank=True, null=True)  # noqa: DJ001
     correo_institucional = models.EmailField(
         max_length=120,
         unique=True,
@@ -14,7 +14,7 @@ class Facultad(models.Model):
 
     class Meta:
         managed = False
-        db_table = "facultad"
+        db_table = '"institucional"."facultad"'
         ordering = ["nombre_facultad"]
         verbose_name = "facultad"
         verbose_name_plural = "facultades"
@@ -48,14 +48,14 @@ class ProgramaAcademico(models.Model):
         on_delete=models.DO_NOTHING,
         related_name="programas",
     )
-    nombre_programa = models.CharField(max_length=100)
+    nombre_programa = models.CharField(max_length=120)
     estado = models.CharField(max_length=20, choices=Estado.choices)
     modalidad = models.CharField(max_length=20, choices=Modalidad.choices)
     nivel_formacion = models.CharField(max_length=30, choices=NivelFormacion.choices)
 
     class Meta:
         managed = False
-        db_table = "programa_academico"
+        db_table = '"institucional"."programa_academico"'
         ordering = ["nombre_programa"]
         verbose_name = "programa academico"
         verbose_name_plural = "programas academicos"
@@ -78,10 +78,34 @@ class PeriodoAcademico(models.Model):
 
     class Meta:
         managed = False
-        db_table = "periodo_academico"
+        db_table = '"institucional"."periodo_academico"'
         ordering = ["-fecha_inicio", "id_periodo_academico"]
         verbose_name = "periodo academico"
         verbose_name_plural = "periodos academicos"
 
     def __str__(self):
         return self.id_periodo_academico
+
+
+class Asignatura(models.Model):
+    class Estado(models.TextChoices):
+        ACTIVA = "Activa", "Activa"
+        INACTIVA = "Inactiva", "Inactiva"
+
+    cod_asignatura = models.CharField(max_length=20, primary_key=True)
+    nombre_asignatura = models.CharField(max_length=120)
+    creditos = models.IntegerField()
+    estado = models.CharField(max_length=20, choices=Estado.choices)
+    horas_teoria = models.IntegerField()
+    horas_pract = models.IntegerField()
+    homologable = models.BooleanField(default=False)
+
+    class Meta:
+        managed = False
+        db_table = '"institucional"."asignatura"'
+        ordering = ["nombre_asignatura"]
+        verbose_name = "asignatura"
+        verbose_name_plural = "asignaturas"
+
+    def __str__(self):
+        return self.nombre_asignatura
