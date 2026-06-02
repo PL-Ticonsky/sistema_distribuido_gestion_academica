@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.homologaciones",
     "apps.indicadores",
     "apps.auditoria",
+    "apps.reportes",
 ]
 
 MIDDLEWARE = [
@@ -67,7 +68,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="gestion_academica_local"),
+        "NAME": env("POSTGRES_DB", default="sga_central"),
         "USER": env("POSTGRES_USER", default="postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", default="postgres"),
         "HOST": env("POSTGRES_HOST", default="localhost"),

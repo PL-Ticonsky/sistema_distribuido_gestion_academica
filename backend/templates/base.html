@@ -149,6 +149,14 @@
                             </a>
                         {% endif %}
                     {% endif %}
+
+                    {% if condor_show_reports %}
+                        <span class="condor-nav-title">Reportes</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'reportes' %}active{% endif %}" href="{% url 'reportes:index' %}">
+                            <i class="bi bi-table"></i>
+                            <span>Reportes</span>
+                        </a>
+                    {% endif %}
                 </nav>
             </aside>
 
