@@ -3,6 +3,8 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db.models import Count
 
+from apps.accounts.roles import FUNCTIONAL_ROLES
+
 
 class Command(BaseCommand):
     help = "Audita usuarios centrales sin imprimir contrasenas ni hashes."
@@ -44,10 +46,19 @@ class Command(BaseCommand):
 
         self.stdout.write("Detalle seguro de usuarios:")
         for user in users:
-            groups = ", ".join(user.groups.values_list("name", flat=True)) or "-"
+            user_groups = list(user.groups.values_list("name", flat=True))
+            groups = ", ".join(user_groups) or "-"
             status = "activo" if user.is_active else "inactivo"
+            recognized_groups = set(user_groups).intersection(FUNCTIONAL_ROLES)
+            unknown_groups = set(user_groups) - set(FUNCTIONAL_ROLES)
+            if not user_groups:
+                role_status = "SIN_GRUPO"
+            elif unknown_groups and not recognized_groups:
+                role_status = "GRUPO_NO_RECONOCIDO"
+            else:
+                role_status = "OK"
             self.stdout.write(
                 f"- {user.correo or '(sin correo)'} | {status} | "
                 f"staff={user.is_staff} | superuser={user.is_superuser} | "
-                f"grupos={groups}"
+                f"grupos={groups} | estado={role_status}"
             )
