@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Inscripciones globales{% endblock %}
+{% block page_title %}Inscripciones globales{% endblock %}
+
+{% block content %}
+<h1>Inscripciones globales</h1>
+{% include "reportes/_filters.html" %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Periodo</th>
+                <th>Estudiante</th>
+                <th>Programa</th>
+                <th>Asignatura</th>
+                <th>Grupo</th>
+                <th>Profesor</th>
+                <th>Nota final</th>
+                <th>Estado</th>
+                <th>Nodo origen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inscripcion in inscripciones %}
+                <tr>
+                    <td>{{ inscripcion.id_periodo_academico }}</td>
+                    <td>{{ inscripcion.estudiante|default:inscripcion.id_estudiante }}</td>
+                    <td>{{ inscripcion.nombre_programa|default:inscripcion.id_programa_academico }}</td>
+                    <td>{{ inscripcion.nombre_asignatura|default:inscripcion.cod_asignatura }}</td>
+                    <td>{{ inscripcion.codigo_grupo }}</td>
+                    <td>{{ inscripcion.profesor|default:"Sin asignar" }}</td>
+                    <td>{{ inscripcion.nota_final|default:"-" }}</td>
+                    <td>{{ inscripcion.estado_inscripcion }}</td>
+                    <td>{{ inscripcion.nodo_origen|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="9">No hay inscripciones para mostrar.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "reportes/_pagination.html" %}
+{% endblock %}

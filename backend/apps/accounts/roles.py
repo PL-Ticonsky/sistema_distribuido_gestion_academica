@@ -1,4 +1,4 @@
-from django.db import DatabaseError
+from django.db import DatabaseError, connection
 from django.urls import reverse
 
 FUNCTIONAL_ROLES = (
@@ -19,6 +19,13 @@ ROLE_LABELS = {
     "superadmin": "Superadmin",
 }
 
+CENTRAL_ROLE_MAP = {
+    "Administrativo": "administrativo",
+    "Docente": "docente",
+    "Estudiante": "estudiante",
+    "Rectoria": "superadmin",
+}
+
 
 def get_user_roles(user):
     if not user or not user.is_authenticated:
@@ -34,6 +41,25 @@ def get_user_roles(user):
             flat=True,
         )
         roles.update(group_roles)
+    except DatabaseError:
+        pass
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select r.nombre_rol
+                from seguridad.usuario_rol ur
+                join seguridad.rol r on r.id_rol = ur.id_rol
+                where ur.id_usuario = %s
+                """,
+                [user.id_usuario],
+            )
+            roles.update(
+                CENTRAL_ROLE_MAP[role_name]
+                for (role_name,) in cursor.fetchall()
+                if role_name in CENTRAL_ROLE_MAP
+            )
     except DatabaseError:
         pass
 

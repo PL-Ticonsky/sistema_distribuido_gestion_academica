@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Homologaciones globales{% endblock %}
+{% block page_title %}Homologaciones globales{% endblock %}
+
+{% block content %}
+<h1>Homologaciones globales</h1>
+{% include "reportes/_filters.html" %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Fecha solicitud</th>
+                <th>Facultad</th>
+                <th>Asignatura origen</th>
+                <th>Institucion origen</th>
+                <th>Estado</th>
+                <th>Nota</th>
+                <th>Nodo origen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for homologacion in homologaciones %}
+                <tr>
+                    <td>{{ homologacion.fecha_solicitud }}</td>
+                    <td>{{ homologacion.id_facultad }}</td>
+                    <td>{{ homologacion.asignatura_origen }}</td>
+                    <td>{{ homologacion.institucion_origen }}</td>
+                    <td>{{ homologacion.estado_homologacion }}</td>
+                    <td>{{ homologacion.nota_obtenida|default:"-" }}</td>
+                    <td>{{ homologacion.nodo_origen|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7">No hay homologaciones para mostrar.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "reportes/_pagination.html" %}
+{% endblock %}

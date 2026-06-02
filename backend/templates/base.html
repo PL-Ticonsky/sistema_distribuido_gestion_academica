@@ -134,7 +134,7 @@
                         </a>
                     {% endif %}
 
-                    {% if condor_show_homologation or condor_show_audit %}
+                    {% if condor_show_homologation or condor_show_audit or condor_show_reports %}
                         <span class="condor-nav-title">Control</span>
                         {% if condor_show_homologation %}
                             <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
@@ -146,6 +146,12 @@
                             <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
                                 <i class="bi bi-shield-check"></i>
                                 <span>Auditoria</span>
+                            </a>
+                        {% endif %}
+                        {% if condor_show_reports %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'reportes' %}active{% endif %}" href="{% url 'reportes:index' %}">
+                                <i class="bi bi-database-check"></i>
+                                <span>Reportes globales</span>
                             </a>
                         {% endif %}
                     {% endif %}

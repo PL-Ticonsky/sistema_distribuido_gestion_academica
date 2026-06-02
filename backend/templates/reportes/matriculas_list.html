@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Matriculas globales{% endblock %}
+{% block page_title %}Matriculas globales{% endblock %}
+
+{% block content %}
+<h1>Matriculas globales</h1>
+{% include "reportes/_filters.html" %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Periodo</th>
+                <th>Estudiante</th>
+                <th>Facultad</th>
+                <th>Programa</th>
+                <th>Matricula</th>
+                <th>Pago</th>
+                <th>Valor pagado</th>
+                <th>Nodo origen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for matricula in matriculas %}
+                <tr>
+                    <td>{{ matricula.id_periodo_academico }}</td>
+                    <td>{{ matricula.estudiante|default:matricula.id_estudiante }}</td>
+                    <td>{{ matricula.nombre_facultad|default:matricula.id_facultad }}</td>
+                    <td>{{ matricula.nombre_programa|default:matricula.id_programa_academico }}</td>
+                    <td>{{ matricula.estado_matricula }}</td>
+                    <td>{{ matricula.estado_pago|default:"-" }}</td>
+                    <td>{{ matricula.valor_pagado|default:"-" }}</td>
+                    <td>{{ matricula.nodo_origen|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8">No hay matriculas para mostrar.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "reportes/_pagination.html" %}
+{% endblock %}

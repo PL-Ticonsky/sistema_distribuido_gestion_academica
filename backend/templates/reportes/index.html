@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes globales{% endblock %}
+{% block page_title %}Reportes globales{% endblock %}
+
+{% block content %}
+<h1>Reportes globales</h1>
+<p class="text-muted">Lectura desde la base central y las vistas del esquema reportes.</p>
+
+<div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:estudiante_list' %}">Estudiantes</a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:profesor_list' %}">Profesores</a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:grupo_list' %}">Grupos</a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:inscripcion_list' %}">Inscripciones</a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:matricula_list' %}">Matriculas</a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+        <a class="btn btn-outline-primary w-100 text-start" href="{% url 'reportes:homologacion_list' %}">Homologaciones</a>
+    </div>
+</div>
+{% endblock %}

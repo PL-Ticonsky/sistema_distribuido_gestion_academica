@@ -1,0 +1,20 @@
+{% if filters %}
+    <form class="row g-2 mb-3" method="get">
+        {% for field, value in filters.items %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="filter-{{ field }}">{{ field }}</label>
+                <input class="form-control" id="filter-{{ field }}" name="{{ field }}" value="{{ value }}">
+            </div>
+        {% endfor %}
+        <div class="col-12 col-md-auto d-flex align-items-end gap-2">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-funnel"></i>
+                Filtrar
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ request.path }}">
+                <i class="bi bi-x-circle"></i>
+                Limpiar
+            </a>
+        </div>
+    </form>
+{% endif %}

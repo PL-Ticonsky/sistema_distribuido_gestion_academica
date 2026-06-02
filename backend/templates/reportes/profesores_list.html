@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Profesores globales{% endblock %}
+{% block page_title %}Profesores globales{% endblock %}
+
+{% block content %}
+<h1>Profesores globales</h1>
+{% include "reportes/_filters.html" %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Profesor</th>
+                <th>Correo</th>
+                <th>Facultad</th>
+                <th>Categoria</th>
+                <th>Vinculacion</th>
+                <th>Nodo origen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for profesor in profesores %}
+                <tr>
+                    <td>{{ profesor.profesor|default:profesor.id_profesor }}</td>
+                    <td>{{ profesor.correo|default:"-" }}</td>
+                    <td>{{ profesor.nombre_facultad|default:profesor.id_facultad }}</td>
+                    <td>{{ profesor.categoria|default:"-" }}</td>
+                    <td>{{ profesor.vinculacion|default:"-" }}</td>
+                    <td>{{ profesor.nodo_origen|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6">No hay profesores para mostrar.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "reportes/_pagination.html" %}
+{% endblock %}

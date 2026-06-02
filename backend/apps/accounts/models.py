@@ -1,7 +1,7 @@
 import uuid
 
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.db import models
+from django.db import connection, models
 from django.utils import timezone
 
 from .managers import CustomUserManager
@@ -47,3 +47,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.nombre} <{self.correo}>"
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if update_fields and set(update_fields) == {"last_login"}:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    update seguridad.usuario_credencial
+                    set last_login = %s
+                    where id_usuario = %s
+                    """,
+                    [self.last_login, self.id_usuario],
+                )
+            return
+
+        return super().save(*args, **kwargs)
