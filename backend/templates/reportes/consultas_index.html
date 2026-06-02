@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Consultas institucionales{% endblock %}
+{% block page_title %}Consultas institucionales{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mt-0 mb-1">20 consultas institucionales</h1>
+        <p class="mb-0">Reportes read-only ejecutados sobre sga_central.</p>
+    </div>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'reportes:index' %}">
+        <i class="bi bi-arrow-left"></i>
+        Reportes
+    </a>
+</div>
+
+<div class="row g-3">
+    {% for consulta in consultas %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <a class="condor-action-card" href="{% url 'reportes:consulta_resultado' consulta.numero %}">
+                <span class="condor-status is-info mb-2">Consulta {{ consulta.numero }}</span>
+                <h2 class="mb-2">{{ consulta.titulo }}</h2>
+                <p class="mb-0">{{ consulta.descripcion }}</p>
+            </a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

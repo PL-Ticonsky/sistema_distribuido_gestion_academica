@@ -1,7 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
 from django.views.generic import ListView, TemplateView
 
 from apps.accounts.access import REPORT_ROLES, RoleRequiredMixin
+from apps.reportes.services import ejecutar_consulta, listar_consultas
 
 from .models import (
     EstudianteDetalle,
@@ -17,6 +19,32 @@ from .models import (
 class ReportesIndexView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     allowed_roles = REPORT_ROLES
     template_name = "reportes/index.html"
+
+
+class ConsultasIndexView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = REPORT_ROLES
+    template_name = "reportes/consultas_index.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["consultas"] = listar_consultas()
+        return context
+
+
+class ConsultaResultadoView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = REPORT_ROLES
+    template_name = "reportes/consulta_resultado.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        numero = self.kwargs["numero"]
+        consulta, columns, rows = ejecutar_consulta(numero)
+        if consulta is None:
+            raise Http404("Consulta no encontrada.")
+        context["consulta"] = consulta
+        context["columns"] = columns
+        context["rows"] = rows
+        return context
 
 
 class ReporteListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
