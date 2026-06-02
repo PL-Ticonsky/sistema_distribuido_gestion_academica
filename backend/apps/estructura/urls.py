@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.estructura.views import (
+    AsignaturaListView,
     FacultadDetailView,
     FacultadListView,
     PeriodoAcademicoListView,
@@ -18,4 +19,5 @@ urlpatterns = [
     ),
     path("programas/", ProgramaListView.as_view(), name="programa_list"),
     path("periodos/", PeriodoAcademicoListView.as_view(), name="periodo_list"),
+    path("asignaturas/", AsignaturaListView.as_view(), name="asignatura_list"),
 ]

@@ -3,7 +3,12 @@ from django.views.generic import DetailView, ListView
 
 from apps.accounts.access import STRUCTURE_ROLES, RoleRequiredMixin
 from apps.accounts.scope import get_visible_faculty_ids, get_visible_program_ids
-from apps.estructura.models import Facultad, PeriodoAcademico, ProgramaAcademico
+from apps.estructura.models import (
+    Asignatura,
+    Facultad,
+    PeriodoAcademico,
+    ProgramaAcademico,
+)
 
 
 class FacultadListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -11,6 +16,7 @@ class FacultadListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     model = Facultad
     template_name = "estructura/facultad_list.html"
     context_object_name = "facultades"
+    paginate_by = 25
 
     def get_queryset(self):
         faculty_ids = get_visible_faculty_ids(self.request.user)
@@ -40,10 +46,13 @@ class ProgramaListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     model = ProgramaAcademico
     template_name = "estructura/programa_list.html"
     context_object_name = "programas"
+    paginate_by = 25
 
     def get_queryset(self):
         program_ids = get_visible_program_ids(self.request.user)
-        queryset = ProgramaAcademico.objects.select_related("facultad")
+        queryset = ProgramaAcademico.objects.select_related("facultad").order_by(
+            "nombre_programa",
+        )
         if program_ids is None:
             return queryset
         return queryset.filter(id_programa_academico__in=program_ids)
@@ -54,3 +63,12 @@ class PeriodoAcademicoListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     model = PeriodoAcademico
     template_name = "estructura/periodo_list.html"
     context_object_name = "periodos"
+    paginate_by = 25
+
+
+class AsignaturaListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
+    allowed_roles = STRUCTURE_ROLES
+    model = Asignatura
+    template_name = "estructura/asignatura_list.html"
+    context_object_name = "asignaturas"
+    paginate_by = 25
