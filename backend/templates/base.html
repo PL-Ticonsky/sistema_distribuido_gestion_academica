@@ -1,0 +1,242 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CONDOR 2{% endblock %} | CONDOR 2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/condor.css' %}">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("condor.sidebar") === "collapsed") {
+                    document.documentElement.classList.add("condor-sidebar-pref-collapsed");
+                }
+            } catch (error) {
+                document.documentElement.classList.remove("condor-sidebar-pref-collapsed");
+            }
+        })();
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% if request.user.is_authenticated %}
+        <button class="condor-mobile-toggle" type="button" data-condor-sidebar-toggle aria-label="Mostrar u ocultar menu lateral" aria-expanded="false">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="condor-sidebar-backdrop" data-condor-sidebar-backdrop></div>
+        <div class="condor-shell">
+            <aside class="condor-sidebar">
+                <div class="condor-sidebar-header">
+                    <a class="condor-brand" href="{% url 'accounts:dashboard' %}">
+                        <span class="condor-brand-mark">C2</span>
+                        <span class="condor-brand-copy">
+                            <span class="condor-brand-name">CONDOR 2</span>
+                            <span class="condor-brand-caption">Gestion academica</span>
+                        </span>
+                    </a>
+                    <button class="condor-collapse-btn" type="button" data-condor-sidebar-toggle aria-label="Contraer o expandir menu lateral" aria-expanded="true">
+                        <i class="bi bi-layout-sidebar-inset"></i>
+                    </button>
+                </div>
+
+                <nav class="condor-nav" aria-label="Navegacion principal">
+                    <span class="condor-nav-title">Principal</span>
+                    <a class="condor-nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+
+                    {% if condor_show_structure %}
+                        <span class="condor-nav-title">Estructura</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'estructura' %}active{% endif %}" href="{% url 'estructura:facultad_list' %}">
+                            <i class="bi bi-building"></i>
+                            <span>Facultades</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'estructura:programa_list' %}">
+                            <i class="bi bi-diagram-3"></i>
+                            <span>Programas</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'estructura:periodo_list' %}">
+                            <i class="bi bi-calendar3"></i>
+                            <span>Periodos</span>
+                        </a>
+                    {% endif %}
+
+                    {% if condor_show_student or condor_show_teacher %}
+                        <span class="condor-nav-title">Academica</span>
+                        {% if condor_show_student %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'academica' %}active{% endif %}" href="{% url 'academica:asignatura_list' %}">
+                                <i class="bi bi-journal-bookmark"></i>
+                                <span>Asignaturas</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:plan_estudios_list' %}">
+                                <i class="bi bi-list-check"></i>
+                                <span>Plan de estudios</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:inscripcion_list' %}">
+                                <i class="bi bi-card-checklist"></i>
+                                <span>Inscripciones</span>
+                            </a>
+                            {% if "coordinador" in condor_roles or condor_is_superadmin %}
+                                <a class="condor-nav-link" href="{% url 'academica:estudiante_create' %}">
+                                    <i class="bi bi-person-plus"></i>
+                                    <span>Agregar estudiante</span>
+                                </a>
+                            {% endif %}
+                            {% if "estudiante" in condor_roles %}
+                                <a class="condor-nav-link {% if request.resolver_match.app_name == 'indicadores' %}active{% endif %}" href="{% url 'indicadores:mi_indicador' %}">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                    <span>Mis indicadores</span>
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                        {% if condor_show_teacher %}
+                            <a class="condor-nav-link" href="{% url 'academica:profesor_list' %}">
+                                <i class="bi bi-person-video3"></i>
+                                <span>Docentes</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:grupo_list' %}">
+                                <i class="bi bi-people"></i>
+                                <span>Grupos</span>
+                            </a>
+                            <a class="condor-nav-link" href="{% url 'academica:nota_grupo_list' %}">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Notas</span>
+                            </a>
+                            {% if condor_show_indicators %}
+                                <a class="condor-nav-link {% if request.resolver_match.app_name == 'indicadores' %}active{% endif %}" href="{% url 'indicadores:indicador_list' %}">
+                                    <i class="bi bi-bar-chart-line"></i>
+                                    <span>Indicadores</span>
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+
+                    {% if condor_show_financial %}
+                        <span class="condor-nav-title">Financiera</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'financiera' %}active{% endif %}" href="{% url 'financiera:tarifa_list' %}">
+                            <i class="bi bi-cash-coin"></i>
+                            <span>Tarifas</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'financiera:recibo_list' %}">
+                            <i class="bi bi-receipt"></i>
+                            <span>Recibos</span>
+                        </a>
+                        <a class="condor-nav-link" href="{% url 'financiera:matricula_list' %}">
+                            <i class="bi bi-mortarboard"></i>
+                            <span>Matriculas</span>
+                        </a>
+                    {% endif %}
+
+                    {% if condor_show_homologation or condor_show_audit %}
+                        <span class="condor-nav-title">Control</span>
+                        {% if condor_show_homologation %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
+                                <i class="bi bi-arrow-left-right"></i>
+                                <span>Homologaciones</span>
+                            </a>
+                        {% endif %}
+                        {% if condor_show_audit %}
+                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Auditoria</span>
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </nav>
+            </aside>
+
+            <div class="condor-main">
+                <header class="condor-topbar">
+                    <div class="condor-topbar-left">
+                        <button class="condor-topbar-toggle" type="button" data-condor-sidebar-toggle aria-label="Mostrar u ocultar menu lateral" aria-expanded="true">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        <div>
+                            <div class="condor-breadcrumb">
+                                <a href="{% url 'accounts:dashboard' %}">CONDOR 2</a>
+                                <span>/</span>
+                                <span>{{ request.resolver_match.app_name|default:"dashboard"|title }}</span>
+                            </div>
+                            <div class="condor-topbar-title">{% block page_title %}Sistema de gestion academica{% endblock %}</div>
+                        </div>
+                    </div>
+
+                    <div class="condor-user-area">
+                        <div class="condor-role-strip" aria-label="Roles activos">
+                            {% for role in condor_roles %}
+                                <span class="condor-role-pill">{{ role|title }}</span>
+                            {% empty %}
+                                <span class="condor-role-pill muted">Sin rol</span>
+                            {% endfor %}
+                        </div>
+                        <div class="condor-user">
+                            <span class="condor-avatar">{{ request.user.nombre|default:request.user.correo|first|upper }}</span>
+                            <span>
+                                <span class="condor-user-name">{{ request.user.nombre }}</span>
+                                <span class="condor-user-email">{{ request.user.correo }}</span>
+                            </span>
+                        </div>
+                        <form method="post" action="{% url 'accounts:logout' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-primary btn-sm condor-logout-btn" type="submit">
+                                <i class="bi bi-box-arrow-right"></i>
+                                Cerrar sesion
+                            </button>
+                        </form>
+                    </div>
+                </header>
+
+                <main class="condor-content">
+                    {% if messages %}
+                        <div class="condor-messages">
+                            {% for message in messages %}
+                                <div class="alert condor-alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <section class="condor-page-surface">
+    {% else %}
+        <main class="condor-auth">
+            <div class="condor-auth-ambient" aria-hidden="true"></div>
+            <section class="condor-auth-card">
+                <div class="condor-auth-brand">
+                    <span class="condor-brand-mark">C2</span>
+                    <div>
+                        <h1>CONDOR 2</h1>
+                        <p>Sistema de gestion academica universitaria</p>
+                    </div>
+                </div>
+    {% endif %}
+
+                        {% block content %}{% endblock %}
+
+    {% if request.user.is_authenticated %}
+                    </section>
+                </main>
+
+                <footer class="condor-footer">
+                    <span>CONDOR 2</span>
+                    <span>Ambiente local de desarrollo</span>
+                </footer>
+            </div>
+        </div>
+    {% else %}
+            </section>
+        </main>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/condor.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

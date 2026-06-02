@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluar homologacion{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+        Volver al detalle
+    </a>
+</p>
+
+<h1>Evaluar homologacion</h1>
+
+<p class="text-muted">
+    {{ homologacion.estudiante.usuario.nombre }} -
+    {{ homologacion.programa_asignatura.asignatura.nombre_asignatura }}
+</p>
+
+<form method="post" class="mt-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+        <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Guardar evaluacion</button>
+</form>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de asignatura{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:asignatura_list' %}">Volver a asignaturas</a></p>
+
+<h1>{{ asignatura.nombre_asignatura }}</h1>
+
+<dl>
+    <dt>Codigo</dt>
+    <dd>{{ asignatura.cod_asignatura }}</dd>
+    <dt>Creditos</dt>
+    <dd>{{ asignatura.creditos }}</dd>
+    <dt>Horas teoria</dt>
+    <dd>{{ asignatura.horas_teoria }}</dd>
+    <dt>Horas practica</dt>
+    <dd>{{ asignatura.horas_pract }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ asignatura.estado }}</dd>
+    <dt>Homologable</dt>
+    <dd>{{ asignatura.homologable|yesno:"Si,No" }}</dd>
+</dl>
+
+<h2>Programas que la incluyen</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Programa</th>
+            <th>Facultad</th>
+            <th>Semestre</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for plan in asignatura.programas.all %}
+            <tr>
+                <td>{{ plan.programa_academico.nombre_programa }}</td>
+                <td>{{ plan.programa_academico.facultad.nombre_facultad }}</td>
+                <td>{{ plan.semestre_sugerido }}</td>
+                <td>{{ plan.tipo_asignatura }}</td>
+                <td>{{ plan.estado }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5">No hay programas asociados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,47 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Django local
+db.sqlite3
+media/
+staticfiles/
+
+backend/media/*
+!backend/media/
+!backend/media/.gitkeep
+backend/staticfiles/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# PostgreSQL dumps/backups
+*.dump
+*.backup
+*.tar
+*.sql.gz
+
+# Test coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.swp

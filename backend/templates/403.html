@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Acceso restringido{% endblock %}
+
+{% block content %}
+<div class="condor-card p-4">
+    <span class="condor-status is-danger mb-3">403</span>
+    <h1>Acceso restringido</h1>
+    <p>
+        Tu usuario no tiene permisos para consultar esta pantalla o el registro solicitado
+        esta fuera de tu alcance funcional.
+    </p>
+    <a class="btn btn-primary" href="{% url 'accounts:dashboard' %}">
+        Volver al dashboard
+    </a>
+</div>
+{% endblock %}

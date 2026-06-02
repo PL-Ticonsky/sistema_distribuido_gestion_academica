@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Docentes{% endblock %}
+
+{% block content %}
+<h1>Docentes</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Docente</th>
+            <th>Correo</th>
+            <th>Facultad</th>
+            <th>Categoria</th>
+            <th>Vinculacion</th>
+            <th>Grupos asignados</th>
+            <th>Cargos asociados</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for profesor in profesores %}
+            <tr>
+                <td>
+                    <a href="{% url 'academica:profesor_detail' profesor.id_profesor %}">
+                        {{ profesor.usuario.nombre }}
+                    </a>
+                </td>
+                <td>{{ profesor.usuario.correo }}</td>
+                <td>{{ profesor.facultad.nombre_facultad }}</td>
+                <td>{{ profesor.categoria|default:"-" }}</td>
+                <td>{{ profesor.vinculacion|default:"-" }}</td>
+                <td>{{ profesor.total_grupos }}</td>
+                <td>
+                    {% if profesor.total_decanaturas or profesor.total_coordinaciones %}
+                        {% if profesor.total_decanaturas %}Decano{% endif %}
+                        {% if profesor.total_decanaturas and profesor.total_coordinaciones %}, {% endif %}
+                        {% if profesor.total_coordinaciones %}Coordinador{% endif %}
+                    {% else %}
+                        Sin cargos academicos
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">No hay docentes registrados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

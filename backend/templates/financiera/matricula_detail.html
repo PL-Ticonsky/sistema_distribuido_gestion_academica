@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de matricula{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:matricula_list' %}">Volver a matriculas</a></p>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Matricula</h1>
+    {% if can_manage_financial %}
+        <div class="d-flex flex-wrap gap-2">
+            <form method="post" action="{% url 'financiera:matricula_activar' matricula.id_matricula %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-success" type="submit">Activar</button>
+            </form>
+            <form method="post" action="{% url 'financiera:matricula_finalizar' matricula.id_matricula %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-primary" type="submit">Finalizar</button>
+            </form>
+            <form method="post" action="{% url 'financiera:matricula_cancelar' matricula.id_matricula %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-secondary" type="submit">Cancelar</button>
+            </form>
+            <form method="post" action="{% url 'financiera:matricula_anular' matricula.id_matricula %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger" type="submit">Anular</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<dl class="row">
+    <dt>Estudiante</dt>
+    <dd>{{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}</dd>
+    <dt>Correo</dt>
+    <dd>{{ matricula.recibo.estudiante.usuario.correo|default:"-" }}</dd>
+    <dt>Programa</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}</dd>
+    <dt>Periodo</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</dd>
+    <dt>Estado matricula</dt>
+    <dd>{{ matricula.estado_matricula }}</dd>
+    <dt>Estado pago</dt>
+    <dd>{{ matricula.recibo.estado_pago }}</dd>
+    <dt>Valor matricula</dt>
+    <dd>{{ matricula.recibo.tarifa_matricula.valor_matricula }}</dd>
+    <dt>Valor pagado</dt>
+    <dd>{{ matricula.recibo.valor_pagado|default:"-" }}</dd>
+</dl>
+
+<p>
+    <a href="{% url 'financiera:recibo_detail' matricula.recibo.id_recibo %}">
+        Ver recibo asociado
+    </a>
+</p>
+{% endblock %}

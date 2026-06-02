@@ -1,0 +1,72 @@
+@startuml state_domain_entities
+title Estados del dominio académico
+skinparam state {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+state "Periodo Académico" as Periodo {
+  [*] --> Planeado
+  Planeado --> Activo
+  Planeado --> Cancelado
+  Activo --> Finalizado
+  Activo --> Cancelado
+}
+
+state "Grupo académico" as Grupo {
+  [*] --> Abierto
+  Abierto --> EnCurso
+  state "En curso" as EnCurso
+  EnCurso --> Finalizado
+  Abierto --> Cancelado
+  EnCurso --> Cancelado
+}
+
+state "Inscripción" as Inscripcion {
+  [*] --> Cursando
+  Cursando --> Aprobada
+  Cursando --> Reprobada
+  Cursando --> Cancelada
+}
+
+state "Homologación" as Homologacion {
+  [*] --> Solicitada
+  Solicitada --> EnRevision : revisar
+  state "En revisión" as EnRevision
+  EnRevision --> Aprobada : aprobar
+  EnRevision --> Rechazada : rechazar
+  Solicitada --> Cancelada : cancelar
+  EnRevision --> Cancelada : cancelar
+}
+
+state "Matrícula" as Matricula {
+  [*] --> Pendiente
+  Pendiente --> Activa : pago OK
+  Pendiente --> Cancelada : cancelar
+  Pendiente --> Anulada : anular
+  Activa --> Finalizada
+  Activa --> Cancelada
+  Activa --> Anulada
+}
+
+state "Recibo" as Recibo {
+  [*] --> PendientePago
+  PendientePago --> Pagado
+  PendientePago --> Vencido
+  PendientePago --> Anulado
+  Pagado --> Anulado
+}
+
+note right of Homologacion
+  Estados derivados de Homologacion.EstadoHomologacion
+end note
+
+note right of Inscripcion
+  Estados derivados de Inscripcion.EstadoInscripcion
+end note
+
+note right of Periodo
+  Estados derivados de PeriodoAcademico.Estado
+end note
+
+@enduml

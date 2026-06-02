@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Facultades{% endblock %}
+
+{% block content %}
+<h1>Facultades</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Ubicacion</th>
+            <th>Correo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for facultad in facultades %}
+            <tr>
+                <td>
+                    <a href="{% url 'estructura:facultad_detail' facultad.id_facultad %}">
+                        {{ facultad.id_facultad }}
+                    </a>
+                </td>
+                <td>{{ facultad.nombre_facultad }}</td>
+                <td>{{ facultad.ubicacion|default:"-" }}</td>
+                <td>{{ facultad.correo_institucional|default:"-" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No hay facultades registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

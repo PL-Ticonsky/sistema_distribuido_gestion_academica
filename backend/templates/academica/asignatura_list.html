@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Asignaturas{% endblock %}
+
+{% block content %}
+<h1>Asignaturas</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Creditos</th>
+            <th>Horas teoria</th>
+            <th>Horas practica</th>
+            <th>Estado</th>
+            <th>Homologable</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for asignatura in asignaturas %}
+            <tr>
+                <td>
+                    <a href="{% url 'academica:asignatura_detail' asignatura.cod_asignatura %}">
+                        {{ asignatura.cod_asignatura }}
+                    </a>
+                </td>
+                <td>{{ asignatura.nombre_asignatura }}</td>
+                <td>{{ asignatura.creditos }}</td>
+                <td>{{ asignatura.horas_teoria }}</td>
+                <td>{{ asignatura.horas_pract }}</td>
+                <td>{{ asignatura.estado }}</td>
+                <td>{{ asignatura.homologable|yesno:"Si,No" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">No hay asignaturas registradas.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Matriculas{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Matriculas</h1>
+        <p class="mb-0">Estado academico-administrativo asociado a recibos pagados.</p>
+    </div>
+    {% if can_manage_financial %}
+        <a class="btn btn-primary" href="{% url 'financiera:matricula_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Crear matricula
+        </a>
+    {% endif %}
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Programa</th>
+            <th>Periodo</th>
+            <th>Estado matricula</th>
+            <th>Estado pago</th>
+            {% if can_manage_financial %}
+                <th>Acciones</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for matricula in matriculas %}
+            <tr>
+                <td>
+                    <a href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
+                        {{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}
+                    </a>
+                </td>
+                <td>
+                    {{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}
+                </td>
+                <td>
+                    {{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}
+                </td>
+                <td>
+                    <span class="condor-status {% if matricula.estado_matricula == 'Activa' or matricula.estado_matricula == 'Finalizada' %}is-success{% elif matricula.estado_matricula == 'Pendiente' %}is-warning{% elif matricula.estado_matricula == 'Cancelada' or matricula.estado_matricula == 'Anulada' %}is-danger{% else %}is-muted{% endif %}">
+                        {{ matricula.estado_matricula }}
+                    </span>
+                </td>
+                <td>
+                    <span class="condor-status {% if matricula.recibo.estado_pago == 'Pagado' %}is-success{% elif matricula.recibo.estado_pago == 'Pendiente' %}is-warning{% elif matricula.recibo.estado_pago == 'Anulado' or matricula.recibo.estado_pago == 'Vencido' %}is-danger{% else %}is-muted{% endif %}">
+                        {{ matricula.recibo.estado_pago }}
+                    </span>
+                </td>
+                {% if can_manage_financial %}
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
+                            Gestionar
+                        </a>
+                    </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="{% if can_manage_financial %}6{% else %}5{% endif %}">
+                    No hay matriculas registradas.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

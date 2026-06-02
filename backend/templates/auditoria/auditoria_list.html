@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoria{% endblock %}
+
+{% block content %}
+<h1>Auditoria</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Usuario</th>
+            <th>Accion realizada</th>
+            <th>Fecha y hora</th>
+            <th>Descripcion</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for registro in registros %}
+            <tr>
+                <td>
+                    <a href="{% url 'auditoria:auditoria_detail' registro.id_auditoria %}">
+                        {{ registro.usuario.nombre|default:registro.usuario_id }}
+                    </a>
+                </td>
+                <td>{{ registro.accion_realizada }}</td>
+                <td>{{ registro.fecha_hora }}</td>
+                <td>{{ registro.descripcion|default:"-"|truncatechars:80 }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No hay registros de auditoria.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

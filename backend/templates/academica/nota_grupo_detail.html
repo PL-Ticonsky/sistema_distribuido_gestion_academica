@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Notas del grupo{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:nota_grupo_list' %}">Volver a gestion de notas</a></p>
+
+<h1>
+    {{ grupo.programa_asignatura.asignatura.nombre_asignatura }}
+    - {{ grupo.codigo_grupo }}
+</h1>
+
+<dl>
+    <dt>Programa</dt>
+    <dd>{{ grupo.programa_asignatura.programa_academico.nombre_programa }}</dd>
+    <dt>Periodo</dt>
+    <dd>{{ grupo.periodo_academico.id_periodo_academico }}</dd>
+    <dt>Docente</dt>
+    <dd>{{ grupo.profesor.usuario.nombre|default:"Sin asignar" }}</dd>
+</dl>
+
+<table>
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Estado</th>
+            <th>Nota 1</th>
+            <th>Nota 2</th>
+            <th>Nota 3</th>
+            <th>Nota final</th>
+            {% if can_edit_grades %}
+                <th>Acciones</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for inscripcion in grupo.inscripciones.all %}
+            <tr>
+                <td>{{ inscripcion.estudiante.usuario.nombre }}</td>
+                <td>{{ inscripcion.estado_inscripcion }}</td>
+                <td>{{ inscripcion.nota1|default:"-" }}</td>
+                <td>{{ inscripcion.nota2|default:"-" }}</td>
+                <td>{{ inscripcion.nota3|default:"-" }}</td>
+                <td>{{ inscripcion.nota_final|default:"-" }}</td>
+                {% if can_edit_grades %}
+                    <td>
+                        {% if inscripcion.estado_inscripcion != "Cancelada" %}
+                            <a href="{% url 'academica:nota_update' inscripcion.id_inscripcion %}">
+                                Editar
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="{% if can_edit_grades %}7{% else %}6{% endif %}">
+                    No hay estudiantes inscritos.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

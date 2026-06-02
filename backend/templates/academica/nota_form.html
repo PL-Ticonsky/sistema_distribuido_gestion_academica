@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Editar notas{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'academica:nota_grupo_detail' inscripcion.grupo.id_grupo %}">
+        Volver a notas del grupo
+    </a>
+</p>
+
+<h1>Editar notas</h1>
+
+<dl>
+    <dt>Estudiante</dt>
+    <dd>{{ inscripcion.estudiante.usuario.nombre }}</dd>
+    <dt>Asignatura</dt>
+    <dd>{{ inscripcion.grupo.programa_asignatura.asignatura.nombre_asignatura }}</dd>
+    <dt>Grupo</dt>
+    <dd>{{ inscripcion.grupo.codigo_grupo }}</dd>
+    <dt>Estado actual</dt>
+    <dd>{{ inscripcion.estado_inscripcion }}</dd>
+</dl>
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        {{ form.nota1.label_tag }}
+        {{ form.nota1 }}
+        {{ form.nota1.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.nota2.label_tag }}
+        {{ form.nota2 }}
+        {{ form.nota2.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.nota3.label_tag }}
+        {{ form.nota3 }}
+        {{ form.nota3.errors }}
+    </div>
+    <button type="submit">Guardar notas</button>
+</form>
+{% endblock %}

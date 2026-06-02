@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Planes de estudio{% endblock %}
+
+{% block content %}
+<h1>Planes de estudio</h1>
+
+{% regroup plan_asignaturas by programa_academico as planes_por_programa %}
+
+{% for programa in planes_por_programa %}
+    <h2>{{ programa.grouper.nombre_programa }}</h2>
+    <p>{{ programa.grouper.facultad.nombre_facultad }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Semestre</th>
+                <th>Codigo</th>
+                <th>Asignatura</th>
+                <th>Creditos</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in programa.list %}
+                <tr>
+                    <td>{{ plan.semestre_sugerido }}</td>
+                    <td>{{ plan.asignatura.cod_asignatura }}</td>
+                    <td>
+                        <a href="{% url 'academica:asignatura_detail' plan.asignatura.cod_asignatura %}">
+                            {{ plan.asignatura.nombre_asignatura }}
+                        </a>
+                    </td>
+                    <td>{{ plan.asignatura.creditos }}</td>
+                    <td>{{ plan.tipo_asignatura }}</td>
+                    <td>{{ plan.estado }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% empty %}
+    <p>No hay planes de estudio registrados.</p>
+{% endfor %}
+{% endblock %}

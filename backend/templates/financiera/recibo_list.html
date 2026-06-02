@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Recibos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Recibos</h1>
+        <p class="mb-0">Seguimiento financiero por estudiante, periodo y estado de pago.</p>
+    </div>
+    {% if can_manage_financial %}
+        <a class="btn btn-primary" href="{% url 'financiera:recibo_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Crear recibo
+        </a>
+    {% endif %}
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Estudiante</th>
+            <th>Programa</th>
+            <th>Periodo</th>
+            <th>Estado pago</th>
+            <th>Valor matricula</th>
+            <th>Valor pagado</th>
+            <th>Fecha pago</th>
+            <th>Metodo</th>
+            {% if can_manage_financial %}
+                <th>Acciones</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for recibo in recibos %}
+            <tr>
+                <td>
+                    <a href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">
+                        {{ recibo.estudiante.usuario.nombre|default:recibo.estudiante_id }}
+                    </a>
+                </td>
+                <td>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</td>
+                <td>{{ recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</td>
+                <td>
+                    <span class="condor-status {% if recibo.estado_pago == 'Pagado' %}is-success{% elif recibo.estado_pago == 'Pendiente' %}is-warning{% elif recibo.estado_pago == 'Anulado' or recibo.estado_pago == 'Vencido' %}is-danger{% else %}is-muted{% endif %}">
+                        {{ recibo.estado_pago }}
+                    </span>
+                </td>
+                <td>{{ recibo.tarifa_matricula.valor_matricula }}</td>
+                <td>{{ recibo.valor_pagado|default:"-" }}</td>
+                <td>{{ recibo.fecha_pago|default:"-" }}</td>
+                <td>{{ recibo.metodo_pago|default:"-" }}</td>
+                {% if can_manage_financial %}
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:recibo_update' recibo.id_recibo %}">
+                            Editar
+                        </a>
+                    </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="{% if can_manage_financial %}9{% else %}8{% endif %}">
+                    No hay recibos registrados.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

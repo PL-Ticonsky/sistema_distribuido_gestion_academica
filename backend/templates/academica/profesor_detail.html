@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de docente{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:profesor_list' %}">Volver a docentes</a></p>
+
+<h1>{{ profesor.usuario.nombre }}</h1>
+
+<dl>
+    <dt>Correo</dt>
+    <dd>{{ profesor.usuario.correo }}</dd>
+    <dt>Documento</dt>
+    <dd>
+        {{ profesor.usuario.tipo_de_documento }}
+        {{ profesor.usuario.numero_de_documento }}
+    </dd>
+    <dt>Facultad</dt>
+    <dd>{{ profesor.facultad.nombre_facultad }}</dd>
+    <dt>Categoria</dt>
+    <dd>{{ profesor.categoria|default:"-" }}</dd>
+    <dt>Vinculacion</dt>
+    <dd>{{ profesor.vinculacion|default:"-" }}</dd>
+</dl>
+
+<h2>Grupos academicos asignados</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Periodo</th>
+            <th>Programa</th>
+            <th>Asignatura</th>
+            <th>Grupo</th>
+            <th>Cupo maximo</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for grupo in profesor.grupos.all %}
+            <tr>
+                <td>{{ grupo.periodo_academico.id_periodo_academico }}</td>
+                <td>{{ grupo.programa_asignatura.programa_academico.nombre_programa }}</td>
+                <td>{{ grupo.programa_asignatura.asignatura.nombre_asignatura }}</td>
+                <td>
+                    <a href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+                        {{ grupo.codigo_grupo }}
+                    </a>
+                </td>
+                <td>{{ grupo.cupo_maximo }}</td>
+                <td>{{ grupo.estado_grupo }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">Este docente no tiene grupos academicos asignados.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Cargos academicos</h2>
+
+{% if profesor.decanaturas.all or profesor.coordinaciones.all %}
+    <table>
+        <thead>
+            <tr>
+                <th>Cargo</th>
+                <th>Unidad academica</th>
+                <th>Facultad</th>
+                <th>Periodo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for decanatura in profesor.decanaturas.all %}
+                <tr>
+                    <td>Decano</td>
+                    <td>{{ decanatura.facultad.nombre_facultad }}</td>
+                    <td>{{ decanatura.facultad.nombre_facultad }}</td>
+                    <td>{{ decanatura.periodo_academico.id_periodo_academico }}</td>
+                </tr>
+            {% endfor %}
+            {% for coordinacion in profesor.coordinaciones.all %}
+                <tr>
+                    <td>Coordinador</td>
+                    <td>{{ coordinacion.programa_academico.nombre_programa }}</td>
+                    <td>{{ coordinacion.programa_academico.facultad.nombre_facultad }}</td>
+                    <td>{{ coordinacion.periodo_academico.id_periodo_academico }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Este docente no tiene cargos academicos asociados.</p>
+{% endif %}
+{% endblock %}

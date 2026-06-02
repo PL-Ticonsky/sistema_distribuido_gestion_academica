@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar sesion{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <span class="condor-role-pill">Acceso institucional</span>
+    <h2 class="mt-3 mb-2">Iniciar sesion</h2>
+    <p class="mb-0">Ingresa con tu correo para acceder al panel academico segun tus roles activos.</p>
+</div>
+
+{% if form.errors %}
+    <div class="alert alert-condor" role="alert">
+        <strong>No pudimos iniciar sesion.</strong>
+        Revisa el correo y la contrasena e intenta nuevamente.
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label" for="{{ form.username.id_for_label }}">Correo institucional</label>
+        {{ form.username }}
+    </div>
+    <div class="mb-4">
+        <label class="form-label" for="{{ form.password.id_for_label }}">Contrasena</label>
+        {{ form.password }}
+    </div>
+    <button class="w-100" type="submit">
+        <i class="bi bi-arrow-right-circle me-1"></i>
+        Entrar al sistema
+    </button>
+</form>
+{% endblock %}

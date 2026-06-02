@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 align-items-stretch mb-4">
+    <div class="col-12 col-xl-8">
+        <div class="condor-card h-100 p-4">
+            <span class="condor-role-pill">Panel institucional</span>
+            <h1 class="mt-3 mb-2">Hola, {{ request.user.nombre }}</h1>
+            <p class="mb-3">
+                Gestion academica, financiera y de seguimiento con accesos ajustados a tus roles activos.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                {% for label in role_labels %}
+                    <span class="condor-status is-info">{{ label }}</span>
+                {% empty %}
+                    <span class="condor-status is-warning">Sin roles funcionales</span>
+                {% endfor %}
+                <span class="condor-status {% if request.user.is_active %}is-success{% else %}is-danger{% endif %}">
+                    {{ request.user.is_active|yesno:"Activo,Inactivo" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="condor-card h-100 p-4">
+            <div class="condor-metric-label">Sesion activa</div>
+            <div class="condor-metric-value">
+                {{ role_labels|length }}
+            </div>
+            <p class="mt-2 mb-2">
+                Rol{{ role_labels|length|pluralize:" activo,es activos" }} en esta cuenta.
+            </p>
+            <span class="condor-status is-muted">{{ request.user.correo }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Accesos rapidos</div>
+            <div class="condor-metric-value">{{ dashboard_options|length }}</div>
+            <div class="condor-metric-help">Opciones disponibles por permisos y alcance funcional.</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Estado de cuenta</div>
+            <div class="condor-metric-value">{% if request.user.is_active %}Activa{% else %}Inactiva{% endif %}</div>
+            <div class="condor-metric-help">Control de acceso aplicado desde autenticacion Django.</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="condor-metric-card h-100">
+            <div class="condor-metric-label">Alcance</div>
+            <div class="condor-metric-value">Rol</div>
+            <div class="condor-metric-help">Cada modulo conserva filtros por estudiante, docente, programa o facultad.</div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h2 class="mt-0 mb-1">Opciones segun rol</h2>
+        <p class="mb-0">Accesos principales disponibles para tu perfil actual.</p>
+    </div>
+</div>
+
+{% if dashboard_options %}
+    <div class="row g-3">
+        {% for option in dashboard_options %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <a class="condor-action-card" href="{{ option.url }}">
+                    <span class="condor-action-icon mb-3">
+                        <i class="bi bi-compass"></i>
+                    </span>
+                    <span class="condor-status is-info mb-2">{{ option.role }}</span>
+                    <h3 class="mb-2">{{ option.title }}</h3>
+                    <p class="mb-0">{{ option.description }}</p>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>
+        Este usuario no tiene grupos funcionales asignados todavia. Un administrador
+        puede asignarlos desde Django admin o desde shell.
+    </p>
+{% endif %}
+{% endblock %}
