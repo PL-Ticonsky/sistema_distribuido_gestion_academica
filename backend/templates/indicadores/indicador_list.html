@@ -30,9 +30,9 @@
         <tbody>
             {% for indicador in indicadores %}
                 <tr>
-                    <td>{{ indicador.student.usuario.nombre }}</td>
-                    <td>{{ indicador.student.programa_academico.nombre_programa }}</td>
-                    <td>{{ indicador.student.programa_academico.facultad.nombre_facultad }}</td>
+                    <td>{{ indicador.student.estudiante|default:indicador.student.id_estudiante }}</td>
+                    <td>{{ indicador.student.nombre_programa|default:"-" }}</td>
+                    <td>{{ indicador.student.nombre_facultad|default:"-" }}</td>
                     <td>
                         {% if indicador.academic_progress is not None %}
                             {{ indicador.academic_progress }}%

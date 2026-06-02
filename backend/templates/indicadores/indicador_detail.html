@@ -9,8 +9,8 @@
     <div>
         <h1 class="mb-1">Indicadores del estudiante</h1>
         <p class="text-muted mb-0">
-            {{ estudiante.usuario.nombre }} -
-            {{ estudiante.programa_academico.nombre_programa }}
+            {{ estudiante.estudiante|default:estudiante.id_estudiante }} -
+            {{ estudiante.nombre_programa|default:"-" }}
         </p>
     </div>
     <span class="badge text-bg-{% if indicador.risk_label == 'Alto' %}danger{% elif indicador.risk_label == 'Medio' %}warning{% else %}success{% endif %}">
