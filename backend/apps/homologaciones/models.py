@@ -1,9 +1,11 @@
 from django.db import models
 
-from apps.academica.models import Estudiante, Profesor, ProgramaAsignatura
+
+def schema_qualified_db_table(schema, table):
+    return f'"{schema}"."{table}"'
 
 
-class Homologacion(models.Model):
+class HomologacionGlobal(models.Model):
     class EstadoHomologacion(models.TextChoices):
         SOLICITADA = "Solicitada", "Solicitada"
         EN_REVISION = "En revision", "En revision"
@@ -11,55 +13,39 @@ class Homologacion(models.Model):
         RECHAZADA = "Rechazada", "Rechazada"
         CANCELADA = "Cancelada", "Cancelada"
 
+    nodo_origen = models.TextField(blank=True, null=True)  # noqa: DJ001
     id_homologacion = models.UUIDField(primary_key=True)
-    profesor_evaluador = models.ForeignKey(
-        Profesor,
-        db_column="id_profesor_evaluador",
-        on_delete=models.DO_NOTHING,
-        related_name="homologaciones_evaluadas",
-    )
-    estudiante = models.ForeignKey(
-        Estudiante,
-        db_column="id_estudiante",
-        on_delete=models.DO_NOTHING,
-        related_name="homologaciones",
-    )
-    asignatura_origen = models.CharField(max_length=100)
-    institucion_origen = models.CharField(max_length=100)
-    programa_asignatura = models.ForeignKey(
-        ProgramaAsignatura,
-        db_column="id_programa_asignatura",
-        on_delete=models.DO_NOTHING,
-        related_name="homologaciones",
-    )
-    fecha_solicitud = models.DateField()
-    estado_homologacion = models.CharField(
+    id_facultad = models.CharField(max_length=10, blank=True, null=True)  # noqa: DJ001
+    id_profesor_evaluador = models.UUIDField(blank=True, null=True)  # noqa: DJ001
+    id_estudiante = models.UUIDField(blank=True, null=True)  # noqa: DJ001
+    asignatura_origen = models.CharField(max_length=120, blank=True, null=True)  # noqa: DJ001
+    institucion_origen = models.CharField(max_length=120, blank=True, null=True)  # noqa: DJ001
+    id_programa_asignatura = models.UUIDField(blank=True, null=True)  # noqa: DJ001
+    fecha_solicitud = models.DateField(blank=True, null=True)  # noqa: DJ001
+    estado_homologacion = models.CharField(  # noqa: DJ001
         max_length=20,
         choices=EstadoHomologacion.choices,
-    )
-    observacion = models.CharField(max_length=255, blank=True, null=True)  # noqa: DJ001
-    fecha_respuesta = models.DateField(blank=True, null=True)
-    nota_obtenida = models.DecimalField(
-        max_digits=3,
-        decimal_places=2,
         blank=True,
         null=True,
     )
+    observacion = models.CharField(max_length=255, blank=True, null=True)  # noqa: DJ001
+    fecha_respuesta = models.DateField(blank=True, null=True)  # noqa: DJ001
+    nota_obtenida = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )  # noqa: DJ001
 
     class Meta:
         managed = False
-        db_table = "homologacion"
-        ordering = [
-            "estudiante__usuario__nombre",
-            "-fecha_solicitud",
-            "programa_asignatura__asignatura__nombre_asignatura",
-        ]
-        verbose_name = "homologacion"
-        verbose_name_plural = "homologaciones"
+        db_table = schema_qualified_db_table("reportes", "vw_homologaciones_global")
+        ordering = ["-fecha_solicitud", "id_homologacion"]
+        verbose_name = "homologacion global"
+        verbose_name_plural = "homologaciones globales"
 
     def __str__(self):
-        return (
-            f"{self.estudiante} - "
-            f"{self.programa_asignatura.asignatura} - "
-            f"{self.estado_homologacion}"
-        )
+        return f"{self.asignatura_origen} - {self.estado_homologacion}"
+
+
+Homologacion = HomologacionGlobal
