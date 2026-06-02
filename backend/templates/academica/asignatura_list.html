@@ -5,7 +5,17 @@
 {% block content %}
 <h1>Asignaturas</h1>
 
-<table>
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-4">
+        <input class="form-control" type="text" name="estado" value="{{ active_filters.estado }}" placeholder="Estado">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
+
+<div class="table-responsive">
+<table class="table align-middle">
     <thead>
         <tr>
             <th>Codigo</th>
@@ -20,11 +30,7 @@
     <tbody>
         {% for asignatura in asignaturas %}
             <tr>
-                <td>
-                    <a href="{% url 'academica:asignatura_detail' asignatura.cod_asignatura %}">
-                        {{ asignatura.cod_asignatura }}
-                    </a>
-                </td>
+                <td>{{ asignatura.cod_asignatura }}</td>
                 <td>{{ asignatura.nombre_asignatura }}</td>
                 <td>{{ asignatura.creditos }}</td>
                 <td>{{ asignatura.horas_teoria }}</td>
@@ -39,4 +45,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

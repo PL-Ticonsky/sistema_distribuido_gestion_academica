@@ -4,6 +4,7 @@ from apps.academica.views import (
     AsignaturaDetailView,
     AsignaturaListView,
     EstudianteCreateView,
+    EstudianteListView,
     GrupoDetailView,
     GrupoListView,
     InscripcionCancelView,
@@ -29,7 +30,9 @@ urlpatterns = [
     ),
     path("planes/", PlanEstudiosListView.as_view(), name="plan_estudios_list"),
     path("prerrequisitos/", PreRequisitoListView.as_view(), name="prerequisito_list"),
+    path("estudiantes/", EstudianteListView.as_view(), name="estudiante_list"),
     path("docentes/", ProfesorListView.as_view(), name="profesor_list"),
+    path("profesores/", ProfesorListView.as_view(), name="profesor_list_alias"),
     path(
         "estudiantes/agregar/",
         EstudianteCreateView.as_view(),

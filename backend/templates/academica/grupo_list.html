@@ -5,16 +5,35 @@
 {% block content %}
 <h1>Grupos academicos</h1>
 
-<table>
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_programa" value="{{ active_filters.nombre_programa }}" placeholder="Programa">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="id_periodo_academico" value="{{ active_filters.id_periodo_academico }}" placeholder="Periodo">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="estado_grupo" value="{{ active_filters.estado_grupo }}" placeholder="Estado">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
+
+<div class="table-responsive">
+<table class="table align-middle">
     <thead>
         <tr>
+            <th>Nodo</th>
             <th>Periodo</th>
+            <th>Facultad</th>
             <th>Programa</th>
             <th>Asignatura</th>
             <th>Grupo</th>
             <th>Cupo maximo</th>
-            <th>Inscritos</th>
-            <th>Disponibles</th>
             <th>Estado</th>
             <th>Profesor</th>
         </tr>
@@ -22,25 +41,15 @@
     <tbody>
         {% for grupo in grupos %}
             <tr>
-                <td>{{ grupo.periodo_academico.id_periodo_academico }}</td>
-                <td>{{ grupo.programa_asignatura.programa_academico.nombre_programa }}</td>
-                <td>{{ grupo.programa_asignatura.asignatura.nombre_asignatura }}</td>
-                <td>
-                    <a href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
-                        {{ grupo.codigo_grupo }}
-                    </a>
-                </td>
+                <td>{{ grupo.nodo_origen|default:"-" }}</td>
+                <td>{{ grupo.id_periodo_academico|default:"-" }}</td>
+                <td>{{ grupo.nombre_facultad|default:"-" }}</td>
+                <td>{{ grupo.nombre_programa|default:"-" }}</td>
+                <td>{{ grupo.nombre_asignatura|default:"-" }}</td>
+                <td>{{ grupo.codigo_grupo|default:"-" }}</td>
                 <td>{{ grupo.cupo_maximo }}</td>
-                <td>{{ grupo.total_inscritos }}</td>
-                <td>{{ grupo.cupos_disponibles }}</td>
                 <td>{{ grupo.estado_grupo }}</td>
-                <td>
-                    {% if grupo.profesor %}
-                        {{ grupo.profesor.usuario.nombre|default:grupo.profesor_id }}
-                    {% else %}
-                        Sin asignar
-                    {% endif %}
-                </td>
+                <td>{{ grupo.profesor|default:"Sin asignar" }}</td>
             </tr>
         {% empty %}
             <tr>
@@ -49,4 +58,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

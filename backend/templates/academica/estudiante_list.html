@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Estudiantes{% endblock %}
+
+{% block content %}
+<h1>Estudiantes</h1>
+
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_programa" value="{{ active_filters.nombre_programa }}" placeholder="Programa">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="estado_estudiante" value="{{ active_filters.estado_estudiante }}" placeholder="Estado">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Estudiante</th>
+                <th>Correo</th>
+                <th>Nodo</th>
+                <th>Facultad</th>
+                <th>Programa</th>
+                <th>Estado</th>
+                <th>Limite matriculas</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for estudiante in estudiantes %}
+                <tr>
+                    <td>{{ estudiante.estudiante|default:"-" }}</td>
+                    <td>{{ estudiante.correo|default:"-" }}</td>
+                    <td>{{ estudiante.nodo_origen|default:"-" }}</td>
+                    <td>{{ estudiante.nombre_facultad|default:"-" }}</td>
+                    <td>{{ estudiante.nombre_programa|default:"-" }}</td>
+                    <td>{{ estudiante.estado_estudiante|default:"-" }}</td>
+                    <td>{{ estudiante.limite_matriculas|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7">No hay estudiantes registrados.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

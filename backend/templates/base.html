@@ -88,9 +88,9 @@
                                 <span>Inscripciones</span>
                             </a>
                             {% if "coordinador" in condor_roles or condor_is_superadmin %}
-                                <a class="condor-nav-link" href="{% url 'academica:estudiante_create' %}">
-                                    <i class="bi bi-person-plus"></i>
-                                    <span>Agregar estudiante</span>
+                                <a class="condor-nav-link" href="{% url 'academica:estudiante_list' %}">
+                                    <i class="bi bi-mortarboard"></i>
+                                    <span>Estudiantes</span>
                                 </a>
                             {% endif %}
                             {% if "estudiante" in condor_roles %}
@@ -108,10 +108,6 @@
                             <a class="condor-nav-link" href="{% url 'academica:grupo_list' %}">
                                 <i class="bi bi-people"></i>
                                 <span>Grupos</span>
-                            </a>
-                            <a class="condor-nav-link" href="{% url 'academica:nota_grupo_list' %}">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Notas</span>
                             </a>
                             {% if condor_show_indicators %}
                                 <a class="condor-nav-link {% if request.resolver_match.app_name == 'indicadores' %}active{% endif %}" href="{% url 'indicadores:indicador_list' %}">
