@@ -1,7 +1,10 @@
 from django.db import models
 
-from apps.academica.models import Estudiante
 from apps.estructura.models import PeriodoAcademico, ProgramaAcademico
+
+
+def schema_qualified_db_table(schema, table):
+    return f'"{schema}"."{table}"'
 
 
 class TarifaMatricula(models.Model):
@@ -16,6 +19,7 @@ class TarifaMatricula(models.Model):
         on_delete=models.DO_NOTHING,
         related_name="tarifas_matricula",
     )
+    id_facultad = models.CharField(max_length=10)
     periodo_academico = models.ForeignKey(
         PeriodoAcademico,
         db_column="id_periodo_academico",
@@ -29,11 +33,8 @@ class TarifaMatricula(models.Model):
 
     class Meta:
         managed = False
-        db_table = "tarifa_matricula"
-        ordering = [
-            "periodo_academico",
-            "programa_academico__nombre_programa",
-        ]
+        db_table = schema_qualified_db_table("financiero", "tarifa_matricula")
+        ordering = ["periodo_academico_id", "programa_academico_id"]
         verbose_name = "tarifa de matricula"
         verbose_name_plural = "tarifas de matricula"
 
@@ -56,25 +57,21 @@ class Recibo(models.Model):
         ANULADO = "Anulado", "Anulado"
 
     id_recibo = models.UUIDField(primary_key=True)
-    estudiante = models.ForeignKey(
-        Estudiante,
-        db_column="id_estudiante",
-        on_delete=models.DO_NOTHING,
-        related_name="recibos",
-    )
+    id_estudiante = models.UUIDField()
+    id_facultad = models.CharField(max_length=10)
     tarifa_matricula = models.ForeignKey(
         TarifaMatricula,
         db_column="id_tarifa_matricula",
         on_delete=models.DO_NOTHING,
         related_name="recibos",
     )
-    fecha_pago = models.DateField(blank=True, null=True)
+    fecha_pago = models.DateField(blank=True, null=True)  # noqa: DJ001
     valor_pagado = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         blank=True,
         null=True,
-    )
+    )  # noqa: DJ001
     metodo_pago = models.CharField(  # noqa: DJ001
         max_length=20,
         choices=MetodoPago.choices,
@@ -86,47 +83,45 @@ class Recibo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "recibo"
-        ordering = [
-            "estudiante__usuario__nombre",
-            "tarifa_matricula__periodo_academico",
-        ]
+        db_table = schema_qualified_db_table("financiero", "recibo")
+        ordering = ["tarifa_matricula_id", "id_estudiante"]
         verbose_name = "recibo"
         verbose_name_plural = "recibos"
 
     def __str__(self):
-        return f"{self.estudiante} - {self.tarifa_matricula}"
+        return f"{self.id_estudiante} - {self.tarifa_matricula}"
 
 
-class Matricula(models.Model):
-    class EstadoMatricula(models.TextChoices):
-        PENDIENTE = "Pendiente", "Pendiente"
-        ACTIVA = "Activa", "Activa"
-        FINALIZADA = "Finalizada", "Finalizada"
-        CANCELADA = "Cancelada", "Cancelada"
-        ANULADA = "Anulada", "Anulada"
-
+class MatriculaDetalle(models.Model):
+    nodo_origen = models.TextField(blank=True, null=True)  # noqa: DJ001
     id_matricula = models.UUIDField(primary_key=True)
-    recibo = models.OneToOneField(
-        Recibo,
-        db_column="id_recibo",
-        on_delete=models.DO_NOTHING,
-        related_name="matricula",
-    )
-    estado_matricula = models.CharField(
-        max_length=20,
-        choices=EstadoMatricula.choices,
-    )
+    id_facultad = models.CharField(max_length=10, blank=True, null=True)  # noqa: DJ001
+    nombre_facultad = models.CharField(max_length=80, blank=True, null=True)  # noqa: DJ001
+    id_estudiante = models.UUIDField(blank=True, null=True)  # noqa: DJ001
+    estudiante = models.CharField(max_length=160, blank=True, null=True)  # noqa: DJ001
+    id_programa_academico = models.CharField(max_length=20, blank=True, null=True)  # noqa: DJ001
+    nombre_programa = models.CharField(max_length=100, blank=True, null=True)  # noqa: DJ001
+    id_periodo_academico = models.CharField(max_length=10, blank=True, null=True)  # noqa: DJ001
+    estado_matricula = models.CharField(max_length=20, blank=True, null=True)  # noqa: DJ001
+    estado_pago = models.CharField(max_length=20, blank=True, null=True)  # noqa: DJ001
+    valor_pagado = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )  # noqa: DJ001
+    fecha_pago = models.DateField(blank=True, null=True)  # noqa: DJ001
+    id_recibo = models.UUIDField(blank=True, null=True)  # noqa: DJ001
 
     class Meta:
         managed = False
-        db_table = "matricula"
-        ordering = [
-            "recibo__estudiante__usuario__nombre",
-            "recibo__tarifa_matricula__periodo_academico",
-        ]
-        verbose_name = "matricula"
-        verbose_name_plural = "matriculas"
+        db_table = schema_qualified_db_table("reportes", "vw_matriculas_detalle")
+        ordering = ["nombre_facultad", "estudiante", "id_periodo_academico"]
+        verbose_name = "detalle de matricula"
+        verbose_name_plural = "detalles de matricula"
 
     def __str__(self):
-        return f"{self.recibo.estudiante} - {self.estado_matricula}"
+        return f"{self.estudiante} - {self.id_periodo_academico}"
+
+
+Matricula = MatriculaDetalle
