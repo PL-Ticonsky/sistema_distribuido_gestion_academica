@@ -13,6 +13,10 @@ from apps.academica.distributed_write import (
     update_inscripcion,
 )
 from apps.academica.models import Inscripcion
+from apps.accounts.access_context import (
+    filter_estudiantes_for_user,
+    filter_grupos_for_user,
+)
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import (
     get_coordinated_program_ids,
@@ -29,7 +33,9 @@ from apps.reportes.models import (
 
 ACTIVE_GROUP_STATES = ("Abierto", "En curso")
 ACTIVE_ENROLLMENT_STATES = ("Cursando", "Aprobada", "Reprobada")
-WRITE_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
+ENROLLMENT_CREATE_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
+ENROLLMENT_EDIT_ROLES = {"docente", "coordinador", "decano", "superadmin"}
+ENROLLMENT_CANCEL_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
 STUDENT_STATUS_CHOICES = (
     ("Activo", "Activo"),
     ("Inactivo", "Inactivo"),
@@ -52,8 +58,22 @@ ENROLLMENT_STATUS_CHOICES = (
 
 
 def user_can_write_enrollments(user):
+    return user_can_create_enrollments(user) or user_can_edit_enrollments(user)
+
+
+def user_can_create_enrollments(user):
     roles = set(get_user_roles(user))
-    return is_superadmin(user) or bool(roles.intersection(WRITE_ROLES))
+    return is_superadmin(user) or bool(roles.intersection(ENROLLMENT_CREATE_ROLES))
+
+
+def user_can_edit_enrollments(user):
+    roles = set(get_user_roles(user))
+    return is_superadmin(user) or bool(roles.intersection(ENROLLMENT_EDIT_ROLES))
+
+
+def user_can_cancel_enrollments(user):
+    roles = set(get_user_roles(user))
+    return is_superadmin(user) or bool(roles.intersection(ENROLLMENT_CANCEL_ROLES))
 
 
 def user_can_create_students(user):
@@ -529,6 +549,12 @@ class InscripcionCreateForm(forms.Form):
         selected_periodo = _selected_value(self.data, "id_periodo_academico") or (
             selected_periodo
         )
+        roles = set(get_user_roles(user))
+        self.is_student_flow = (
+            "estudiante" in roles
+            and not roles.intersection({"coordinador", "decano", "superadmin"})
+        )
+        self.student = None
 
         student_queryset = EstudianteDetalle.objects.order_by(
             "nombre_facultad", "nombre_programa", "estudiante"
@@ -543,24 +569,49 @@ class InscripcionCreateForm(forms.Form):
             group_queryset = group_queryset.filter(
                 id_periodo_academico=selected_periodo,
             )
-        self.fields["id_estudiante"].queryset = student_queryset
+        student_queryset = filter_estudiantes_for_user(student_queryset, user)
+
+        if self.is_student_flow:
+            self.student = student_queryset.first()
+            if self.student is not None:
+                group_queryset = self._student_available_groups(
+                    group_queryset,
+                    self.student,
+                )
+            for field_name in (
+                "id_estudiante",
+                "intento",
+                "estado_inscripcion",
+                "nota1",
+                "nota2",
+                "nota3",
+                "nota_final",
+            ):
+                self.fields.pop(field_name, None)
+        else:
+            group_queryset = filter_grupos_for_user(group_queryset, user)
+
+        if "id_estudiante" in self.fields:
+            self.fields["id_estudiante"].queryset = student_queryset
         self.fields["id_grupo"].queryset = group_queryset.order_by(
             "nombre_facultad",
             "id_periodo_academico",
             "nombre_asignatura",
             "codigo_grupo",
         )
-        self.fields["id_estudiante"].label_from_instance = (
-            lambda student: (
-                f"{student.nombre_facultad} - {student.estudiante} "
-                f"({student.nombre_programa}) - {student.correo}"
+        if "id_estudiante" in self.fields:
+            self.fields["id_estudiante"].label_from_instance = (
+                lambda student: (
+                    f"{student.nombre_facultad} - {student.estudiante} "
+                    f"({student.nombre_programa}) - {student.correo}"
+                )
             )
-        )
         self.fields["id_grupo"].label_from_instance = (
             lambda group: (
                 f"{group.nombre_facultad} - {group.id_periodo_academico} - "
                 f"{group.nombre_programa} - {group.nombre_asignatura} - "
-                f"Grupo {group.codigo_grupo}"
+                f"Grupo {group.codigo_grupo} - "
+                f"{group.profesor or 'Sin docente'} - cupo {group.cupo_maximo}"
             )
         )
 
@@ -579,15 +630,32 @@ class InscripcionCreateForm(forms.Form):
             self.fields["nota3"].initial = getattr(inscripcion, "nota3", None)
             self.fields["nota_final"].initial = inscripcion.nota_final
 
+    def _student_available_groups(self, group_queryset, student):
+        enrolled_group_ids = InscripcionDetalle.objects.filter(
+            id_estudiante=student.id_estudiante,
+        ).values_list("id_grupo", flat=True)
+        return (
+            group_queryset.filter(
+                id_programa_academico=student.id_programa_academico,
+                estado_grupo__in=ACTIVE_GROUP_STATES,
+            )
+            .exclude(id_grupo__in=list(enrolled_group_ids))
+        )
+
     def clean(self):
         cleaned_data = super().clean()
-        student = cleaned_data.get("id_estudiante")
+        student = self.student if self.is_student_flow else cleaned_data.get(
+            "id_estudiante"
+        )
         group = cleaned_data.get("id_grupo")
-        estado = cleaned_data.get("estado_inscripcion")
+        estado = cleaned_data.get("estado_inscripcion", "Cursando")
         nota_final = cleaned_data.get("nota_final")
-        intento = cleaned_data.get("intento")
+        intento = cleaned_data.get("intento", 1)
 
-        if not user_can_write_enrollments(self.user):
+        if self.inscripcion is None and not user_can_create_enrollments(self.user):
+            raise ValidationError("No tienes permisos para crear inscripciones.")
+
+        if self.inscripcion is not None and not user_can_edit_enrollments(self.user):
             raise ValidationError("No tienes permisos para gestionar inscripciones.")
 
         if intento is not None and intento <= 0:
@@ -600,6 +668,14 @@ class InscripcionCreateForm(forms.Form):
 
         if not student or not group:
             return cleaned_data
+
+        if self.is_student_flow:
+            if group.id_programa_academico != student.id_programa_academico:
+                raise ValidationError(
+                    "Solo puedes inscribirte en grupos de tu programa academico.",
+                )
+            if group.estado_grupo not in ACTIVE_GROUP_STATES:
+                raise ValidationError("El grupo no esta abierto para inscripciones.")
 
         if student.id_facultad != group.id_facultad:
             raise ValidationError(
@@ -620,15 +696,19 @@ class InscripcionCreateForm(forms.Form):
         return cleaned_data
 
     def save(self):
+        student = self.student or self.cleaned_data["id_estudiante"]
         return create_inscripcion(
-            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            id_estudiante=student.pk,
             id_grupo=self.cleaned_data["id_grupo"].pk,
             nota1=self.cleaned_data.get("nota1"),
             nota2=self.cleaned_data.get("nota2"),
             nota3=self.cleaned_data.get("nota3"),
             nota_final=self.cleaned_data.get("nota_final"),
-            intento=self.cleaned_data["intento"],
-            estado_inscripcion=self.cleaned_data["estado_inscripcion"],
+            intento=self.cleaned_data.get("intento", 1),
+            estado_inscripcion=self.cleaned_data.get(
+                "estado_inscripcion",
+                "Cursando",
+            ),
         )
 
 

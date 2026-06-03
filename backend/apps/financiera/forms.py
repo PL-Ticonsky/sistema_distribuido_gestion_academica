@@ -4,6 +4,11 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from apps.accounts.access_context import (
+    filter_estudiantes_for_user,
+    filter_recibos_for_user,
+    get_access_context,
+)
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import is_superadmin
 from apps.estructura.models import PeriodoAcademico, ProgramaAcademico
@@ -81,13 +86,21 @@ class TarifaMatriculaForm(forms.Form):
     )
     estado = forms.ChoiceField(label="Estado", choices=TARIFA_STATUS_CHOICES)
 
-    def __init__(self, *args, tarifa=None, **kwargs):
+    def __init__(self, *args, tarifa=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.tarifa = tarifa
-        self.fields["programa_academico"].queryset = ProgramaAcademico.objects.order_by(
+        self.user = user
+        program_queryset = ProgramaAcademico.objects.order_by(
             "facultad__nombre_facultad",
             "nombre_programa",
         )
+        if user is not None:
+            context = get_access_context(user)
+            if not context.is_superadmin:
+                program_queryset = program_queryset.filter(
+                    id_programa_academico__in=context.program_ids,
+                )
+        self.fields["programa_academico"].queryset = program_queryset
         self.fields["periodo_academico"].queryset = PeriodoAcademico.objects.order_by(
             "-fecha_inicio",
             "id_periodo_academico",
@@ -189,17 +202,27 @@ class ReciboForm(forms.Form):
         initial=Decimal("0"),
     )
 
-    def __init__(self, *args, recibo=None, **kwargs):
+    def __init__(self, *args, recibo=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.recibo = recibo
-        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+        self.user = user
+        student_queryset = EstudianteDetalle.objects.order_by(
             "nombre_facultad",
             "nombre_programa",
             "estudiante",
         )
-        self.fields["tarifa_matricula"].queryset = TarifaMatricula.objects.filter(
+        tarifa_queryset = TarifaMatricula.objects.filter(
             estado="Activa",
         ).select_related("programa_academico", "periodo_academico")
+        if user is not None:
+            context = get_access_context(user)
+            student_queryset = filter_estudiantes_for_user(student_queryset, user)
+            if not context.is_superadmin:
+                tarifa_queryset = tarifa_queryset.filter(
+                    id_facultad__in=context.faculty_ids,
+                )
+        self.fields["id_estudiante"].queryset = student_queryset
+        self.fields["tarifa_matricula"].queryset = tarifa_queryset
         self.fields["id_estudiante"].label_from_instance = (
             lambda student: (
                 f"{student.nombre_facultad} - {student.estudiante} "
@@ -301,14 +324,17 @@ class MatriculaForm(forms.Form):
         choices=MATRICULA_STATUS_CHOICES,
     )
 
-    def __init__(self, *args, matricula=None, **kwargs):
+    def __init__(self, *args, matricula=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.matricula = matricula
+        self.user = user
         recibos = Recibo.objects.filter(estado_pago="Pagado").select_related(
             "tarifa_matricula",
             "tarifa_matricula__programa_academico",
             "tarifa_matricula__periodo_academico",
         )
+        if user is not None:
+            recibos = filter_recibos_for_user(recibos, user)
         if matricula is None:
             used = MatriculaDetalle.objects.values_list("id_recibo", flat=True)
             recibos = recibos.exclude(id_recibo__in=used)

@@ -8,7 +8,7 @@
         <h1 class="mb-1">Homologaciones</h1>
         <p class="mb-0">Lectura consolidada desde reportes.vw_homologaciones_global.</p>
     </div>
-    {% if can_write_homologaciones %}
+    {% if can_create_homologaciones %}
         <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_create' %}">
             <i class="bi bi-plus-circle"></i>
             Crear homologacion
@@ -80,16 +80,22 @@
                         <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
                             Ver
                         </a>
-                        {% if can_write_homologaciones %}
+                        {% if can_edit_homologaciones %}
                             <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_update' homologacion.id_homologacion %}">
                                 Editar
                             </a>
+                        {% endif %}
+                        {% if can_assign_homologaciones %}
                             <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
                                 Evaluador
                             </a>
+                        {% endif %}
+                        {% if can_evaluate_homologaciones %}
                             <a class="btn btn-outline-success" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
                                 Evaluar
                             </a>
+                        {% endif %}
+                        {% if can_cancel_homologaciones %}
                             <a class="btn btn-outline-danger" href="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
                                 Cancelar
                             </a>

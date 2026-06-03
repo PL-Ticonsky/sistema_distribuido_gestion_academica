@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import DetailView, ListView
 
 from apps.accounts.access import STRUCTURE_ROLES, RoleRequiredMixin
-from apps.accounts.scope import get_visible_faculty_ids, get_visible_program_ids
+from apps.accounts.access_context import get_access_context
 from apps.estructura.models import (
     Asignatura,
     Facultad,
@@ -19,11 +19,11 @@ class FacultadListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        faculty_ids = get_visible_faculty_ids(self.request.user)
+        context = get_access_context(self.request.user)
         queryset = Facultad.objects.all()
-        if faculty_ids is None:
+        if context.is_superadmin:
             return queryset
-        return queryset.filter(id_facultad__in=faculty_ids)
+        return queryset.filter(id_facultad__in=context.faculty_ids)
 
 
 class FacultadDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -34,11 +34,11 @@ class FacultadDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     pk_url_kwarg = "id_facultad"
 
     def get_queryset(self):
-        faculty_ids = get_visible_faculty_ids(self.request.user)
+        context = get_access_context(self.request.user)
         queryset = Facultad.objects.prefetch_related("programas")
-        if faculty_ids is None:
+        if context.is_superadmin:
             return queryset
-        return queryset.filter(id_facultad__in=faculty_ids)
+        return queryset.filter(id_facultad__in=context.faculty_ids)
 
 
 class ProgramaListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -49,13 +49,13 @@ class ProgramaListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        program_ids = get_visible_program_ids(self.request.user)
+        context = get_access_context(self.request.user)
         queryset = ProgramaAcademico.objects.select_related("facultad").order_by(
             "nombre_programa",
         )
-        if program_ids is None:
+        if context.is_superadmin:
             return queryset
-        return queryset.filter(id_programa_academico__in=program_ids)
+        return queryset.filter(id_programa_academico__in=context.program_ids)
 
 
 class PeriodoAcademicoListView(LoginRequiredMixin, RoleRequiredMixin, ListView):

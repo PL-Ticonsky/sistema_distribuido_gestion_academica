@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Asignaturas{% endblock %}
+{% block title %}{{ list_title|default:"Asignaturas" }}{% endblock %}
 
 {% block content %}
-<h1>Asignaturas</h1>
+<h1>{{ list_title|default:"Asignaturas" }}</h1>
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-4">

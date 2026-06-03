@@ -1,5 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.db import connection
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, TemplateView, View
@@ -16,14 +18,24 @@ from apps.academica.forms import (
     GrupoUpdateForm,
     InscripcionCreateForm,
     InscripcionUpdateForm,
+    user_can_cancel_enrollments,
+    user_can_create_enrollments,
     user_can_create_groups,
     user_can_create_students,
+    user_can_edit_enrollments,
     user_can_write_enrollments,
 )
 from apps.accounts.access import (
     STUDENT_ROLES,
     TEACHING_ROLES,
     RoleRequiredMixin,
+)
+from apps.accounts.access_context import (
+    filter_estudiantes_for_user,
+    filter_grupos_for_user,
+    filter_inscripciones_for_user,
+    filter_profesores_for_user,
+    get_access_context,
 )
 from apps.auditoria.services import registrar_auditoria
 from apps.estructura.models import Asignatura
@@ -40,19 +52,45 @@ from apps.reportes.models import (
     ProfesorDetalle,
 )
 
-ACADEMIC_READ_ROLES = (*STUDENT_ROLES, "docente")
+ACADEMIC_READ_ROLES = (*STUDENT_ROLES, "docente", "administrativo")
 STUDENT_WRITE_ROLES = ("coordinador", "superadmin")
 GROUP_WRITE_ROLES = ("coordinador", "superadmin")
 ENROLLMENT_WRITE_ROLES = ("estudiante", "coordinador", "decano", "superadmin")
-READ_ONLY_MESSAGE = "La escritura academica distribuida aun no esta habilitada."
+ENROLLMENT_EDIT_ROLES = ("estudiante", "docente", "coordinador", "decano", "superadmin")
+READ_ONLY_MESSAGE = (
+    "Esta pantalla es de consulta consolidada; usa las acciones disponibles del modulo."
+)
+CURRENT_ENROLLMENT_STATES = {"Cursando"}
+
+
+def _subject_codes_for_user(user):
+    context = get_access_context(user)
+    if context.is_superadmin:
+        return None
+    if not context.program_ids:
+        return []
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select distinct cod_asignatura
+            from reportes.vw_programa_asignatura_global
+            where id_programa_academico = any(%s)
+              and estado = 'Activa'
+            """,
+            [list(context.program_ids)],
+        )
+        return [row[0] for row in cursor.fetchall()]
 
 
 class AcademicReportListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     paginate_by = 25
     filters = ()
+    access_filter = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.access_filter is not None:
+            queryset = self.access_filter(queryset, self.request.user)
         for field in self.filters:
             value = self.request.GET.get(field)
             if value:
@@ -74,17 +112,26 @@ class AsignaturaListView(AcademicReportListView):
     context_object_name = "asignaturas"
     filters = ("estado",)
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        subject_codes = _subject_codes_for_user(self.request.user)
+        if subject_codes is not None:
+            queryset = queryset.filter(cod_asignatura__in=subject_codes)
+        return queryset
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["estado_choices"] = distinct_choices(Asignatura, "estado", "Todos")
+        context["list_title"] = getattr(self, "list_title", "Asignaturas")
         return context
 
 
 class EstudianteListView(AcademicReportListView):
-    allowed_roles = STUDENT_ROLES
+    allowed_roles = (*STUDENT_ROLES, "administrativo")
     model = EstudianteDetalle
     template_name = "academica/estudiante_list.html"
     context_object_name = "estudiantes"
+    access_filter = staticmethod(filter_estudiantes_for_user)
     filters = (
         "id_facultad",
         "id_programa_academico",
@@ -107,11 +154,14 @@ class EstudianteListView(AcademicReportListView):
 
 
 class EstudianteDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
-    allowed_roles = STUDENT_ROLES
+    allowed_roles = (*STUDENT_ROLES, "administrativo")
     model = EstudianteDetalle
     template_name = "academica/estudiante_detail.html"
     context_object_name = "estudiante"
     pk_url_kwarg = "id_estudiante"
+
+    def get_queryset(self):
+        return filter_estudiantes_for_user(super().get_queryset(), self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -160,7 +210,7 @@ class EstudianteUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         self.estudiante = get_object_or_404(
-            EstudianteDetalle,
+            filter_estudiantes_for_user(EstudianteDetalle.objects.all(), request.user),
             pk=kwargs["id_estudiante"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -207,7 +257,7 @@ class EstudianteDeactivateView(LoginRequiredMixin, RoleRequiredMixin, TemplateVi
 
     def dispatch(self, request, *args, **kwargs):
         self.estudiante = get_object_or_404(
-            EstudianteDetalle,
+            filter_estudiantes_for_user(EstudianteDetalle.objects.all(), request.user),
             pk=kwargs["id_estudiante"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -237,11 +287,12 @@ class EstudianteDeactivateView(LoginRequiredMixin, RoleRequiredMixin, TemplateVi
 
 
 class ProfesorListView(AcademicReportListView):
-    allowed_roles = TEACHING_ROLES
+    allowed_roles = (*TEACHING_ROLES, "administrativo")
     model = ProfesorDetalle
     template_name = "academica/profesor_list.html"
     context_object_name = "profesores"
     filters = ("id_facultad", "categoria", "vinculacion")
+    access_filter = staticmethod(filter_profesores_for_user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -260,10 +311,11 @@ class ProfesorListView(AcademicReportListView):
 
 
 class GrupoListView(AcademicReportListView):
-    allowed_roles = TEACHING_ROLES
+    allowed_roles = (*TEACHING_ROLES, "administrativo")
     model = GrupoDetalle
     template_name = "academica/grupo_list.html"
     context_object_name = "grupos"
+    access_filter = staticmethod(filter_grupos_for_user)
     filters = (
         "id_facultad",
         "id_programa_academico",
@@ -288,11 +340,14 @@ class GrupoListView(AcademicReportListView):
 
 
 class GrupoDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
-    allowed_roles = TEACHING_ROLES
+    allowed_roles = (*TEACHING_ROLES, "administrativo")
     model = GrupoDetalle
     template_name = "academica/grupo_detail.html"
     context_object_name = "grupo"
     pk_url_kwarg = "id_grupo"
+
+    def get_queryset(self):
+        return filter_grupos_for_user(super().get_queryset(), self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -340,7 +395,10 @@ class GrupoUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     success_url = reverse_lazy("academica:grupo_list")
 
     def dispatch(self, request, *args, **kwargs):
-        self.grupo = get_object_or_404(GrupoDetalle, pk=kwargs["id_grupo"])
+        self.grupo = get_object_or_404(
+            filter_grupos_for_user(GrupoDetalle.objects.all(), request.user),
+            pk=kwargs["id_grupo"],
+        )
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
@@ -378,7 +436,10 @@ class GrupoCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     template_name = "academica/grupo_confirm_cancel.html"
 
     def dispatch(self, request, *args, **kwargs):
-        self.grupo = get_object_or_404(GrupoDetalle, pk=kwargs["id_grupo"])
+        self.grupo = get_object_or_404(
+            filter_grupos_for_user(GrupoDetalle.objects.all(), request.user),
+            pk=kwargs["id_grupo"],
+        )
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -410,6 +471,7 @@ class InscripcionListView(AcademicReportListView):
     model = InscripcionDetalle
     template_name = "academica/inscripcion_list.html"
     context_object_name = "inscripciones"
+    access_filter = staticmethod(filter_inscripciones_for_user)
     filters = (
         "id_facultad",
         "id_programa_academico",
@@ -422,6 +484,29 @@ class InscripcionListView(AcademicReportListView):
         context["can_write_enrollments"] = user_can_write_enrollments(
             self.request.user,
         )
+        context["can_create_enrollments"] = user_can_create_enrollments(
+            self.request.user,
+        )
+        context["can_edit_enrollments"] = user_can_edit_enrollments(self.request.user)
+        context["can_cancel_enrollments"] = user_can_cancel_enrollments(
+            self.request.user,
+        )
+        context["student_enrollment_view"] = (
+            "estudiante" in get_access_context(self.request.user).roles
+            and not user_can_edit_enrollments(self.request.user)
+        )
+        if context["student_enrollment_view"]:
+            object_list = list(context["inscripciones"])
+            context["current_inscripciones"] = [
+                item
+                for item in object_list
+                if item.estado_inscripcion in CURRENT_ENROLLMENT_STATES
+            ]
+            context["history_inscripciones"] = [
+                item
+                for item in object_list
+                if item.estado_inscripcion not in CURRENT_ENROLLMENT_STATES
+            ]
         context["facultad_choices"] = facultad_choices()
         context["programa_choices"] = programa_choices(
             self.request.GET.get("id_facultad"),
@@ -442,10 +527,21 @@ class InscripcionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     context_object_name = "inscripcion"
     pk_url_kwarg = "id_inscripcion"
 
+    def get_queryset(self):
+        return filter_inscripciones_for_user(
+            super().get_queryset(),
+            self.request.user,
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_write_enrollments"] = user_can_write_enrollments(
             self.request.user,
+        )
+        context["can_edit_enrollment"] = user_can_edit_enrollments(self.request.user)
+        context["can_cancel_enrollment"] = (
+            user_can_cancel_enrollments(self.request.user)
+            and self.object.estado_inscripcion in CURRENT_ENROLLMENT_STATES
         )
         return context
 
@@ -478,9 +574,14 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear inscripcion"
-        context["submit_label"] = "Crear inscripcion"
-        context["facultad_choices"] = facultad_choices("Seleccione facultad")
-        context["periodo_choices"] = periodo_choices("Seleccione periodo")
+        context["submit_label"] = "Solicitar inscripcion"
+        is_student_flow = (
+            "estudiante" in get_access_context(self.request.user).roles
+            and not user_can_edit_enrollments(self.request.user)
+        )
+        if not is_student_flow:
+            context["facultad_choices"] = facultad_choices("Seleccione facultad")
+            context["periodo_choices"] = periodo_choices("Seleccione periodo")
         context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         context["selected_periodo"] = self.request.GET.get(
             "id_periodo_academico",
@@ -490,14 +591,19 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
 
 
 class InscripcionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
-    allowed_roles = ENROLLMENT_WRITE_ROLES
+    allowed_roles = ENROLLMENT_EDIT_ROLES
     form_class = InscripcionUpdateForm
     template_name = "academica/inscripcion_form.html"
     success_url = reverse_lazy("academica:inscripcion_list")
 
     def dispatch(self, request, *args, **kwargs):
+        if not user_can_edit_enrollments(request.user):
+            raise PermissionDenied("Los estudiantes no pueden editar notas o estado.")
         self.inscripcion = get_object_or_404(
-            InscripcionDetalle,
+            filter_inscripciones_for_user(
+                InscripcionDetalle.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_inscripcion"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -545,7 +651,10 @@ class InscripcionCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView)
 
     def dispatch(self, request, *args, **kwargs):
         self.inscripcion = get_object_or_404(
-            InscripcionDetalle,
+            filter_inscripciones_for_user(
+                InscripcionDetalle.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_inscripcion"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -594,8 +703,8 @@ class ProfesorDetailView(ReadOnlyRedirectView):
     redirect_url_name = "academica:profesor_list"
 
 
-class PlanEstudiosListView(ReadOnlyRedirectView):
-    redirect_url_name = "academica:asignatura_list"
+class PlanEstudiosListView(AsignaturaListView):
+    list_title = "Plan de estudios"
 
 
 class PreRequisitoListView(ReadOnlyRedirectView):

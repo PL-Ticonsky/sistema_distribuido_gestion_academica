@@ -8,10 +8,10 @@
         <h1 class="mb-1">Inscripciones</h1>
         <p class="mb-0">Lectura consolidada desde reportes.vw_inscripciones_detalle.</p>
     </div>
-    {% if can_write_enrollments %}
+    {% if can_create_enrollments %}
         <a class="btn btn-primary" href="{% url 'academica:inscripcion_create' %}">
             <i class="bi bi-plus-circle"></i>
-            Crear inscripcion
+            Solicitar inscripcion
         </a>
     {% endif %}
 </div>
@@ -50,68 +50,13 @@
     </div>
 </form>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>Estudiante</th>
-                <th>Nodo</th>
-                <th>Facultad</th>
-                <th>Periodo</th>
-                <th>Programa</th>
-                <th>Asignatura</th>
-                <th>Grupo</th>
-                <th>Profesor</th>
-                <th>Estado</th>
-                <th>Nota final</th>
-                <th>Intento</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for inscripcion in inscripciones %}
-                <tr>
-                    <td>
-                        <a href="{% url 'academica:inscripcion_detail' inscripcion.id_inscripcion %}">
-                            {{ inscripcion.estudiante|default:inscripcion.id_estudiante }}
-                        </a>
-                    </td>
-                    <td>{{ inscripcion.nodo_origen|default:"-" }}</td>
-                    <td>{{ inscripcion.nombre_facultad|default:"-" }}</td>
-                    <td>{{ inscripcion.id_periodo_academico|default:"-" }}</td>
-                    <td>{{ inscripcion.nombre_programa|default:"-" }}</td>
-                    <td>{{ inscripcion.nombre_asignatura|default:"-" }}</td>
-                    <td>{{ inscripcion.codigo_grupo|default:"-" }}</td>
-                    <td>{{ inscripcion.profesor|default:"-" }}</td>
-                    <td>
-                        <span class="condor-status {% if inscripcion.estado_inscripcion == 'Aprobada' %}is-success{% elif inscripcion.estado_inscripcion == 'Reprobada' or inscripcion.estado_inscripcion == 'Cancelada' %}is-danger{% elif inscripcion.estado_inscripcion == 'Cursando' %}is-info{% else %}is-muted{% endif %}">
-                            {{ inscripcion.estado_inscripcion }}
-                        </span>
-                    </td>
-                    <td>{{ inscripcion.nota_final|default:"-" }}</td>
-                    <td>{{ inscripcion.intento }}</td>
-                    <td>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de inscripcion">
-                            <a class="btn btn-outline-secondary" href="{% url 'academica:inscripcion_detail' inscripcion.id_inscripcion %}">
-                                Ver
-                            </a>
-                            {% if can_write_enrollments %}
-                                <a class="btn btn-outline-primary" href="{% url 'academica:inscripcion_update' inscripcion.id_inscripcion %}">
-                                    Editar
-                                </a>
-                                <a class="btn btn-outline-danger" href="{% url 'academica:inscripcion_cancel' inscripcion.id_inscripcion %}">
-                                    Cancelar
-                                </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="12">No hay inscripciones registradas.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+{% if student_enrollment_view %}
+    <h2 class="h4 mt-4">Cursos actuales</h2>
+    {% include "academica/_inscripcion_table.html" with table_inscripciones=current_inscripciones empty_message="No tienes cursos actuales." %}
+
+    <h2 class="h4 mt-4">Historial academico</h2>
+    {% include "academica/_inscripcion_table.html" with table_inscripciones=history_inscripciones empty_message="No hay historial academico registrado." %}
+{% else %}
+    {% include "academica/_inscripcion_table.html" with table_inscripciones=inscripciones %}
+{% endif %}
 {% endblock %}
