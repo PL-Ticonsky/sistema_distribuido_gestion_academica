@@ -3,7 +3,18 @@
 {% block title %}Estudiantes{% endblock %}
 
 {% block content %}
-<h1>Estudiantes</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Estudiantes</h1>
+        <p class="text-muted mb-0">Lectura consolidada desde reportes.vw_estudiantes_detalle.</p>
+    </div>
+    {% if can_create_students %}
+        <a class="btn btn-primary" href="{% url 'academica:estudiante_create' %}">
+            <i class="bi bi-person-plus"></i>
+            Crear estudiante
+        </a>
+    {% endif %}
+</div>
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
@@ -31,22 +42,42 @@
                 <th>Programa</th>
                 <th>Estado</th>
                 <th>Limite matriculas</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for estudiante in estudiantes %}
                 <tr>
-                    <td>{{ estudiante.estudiante|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'academica:estudiante_detail' estudiante.id_estudiante %}">
+                            {{ estudiante.estudiante|default:estudiante.id_estudiante }}
+                        </a>
+                    </td>
                     <td>{{ estudiante.correo|default:"-" }}</td>
                     <td>{{ estudiante.nodo_origen|default:"-" }}</td>
                     <td>{{ estudiante.nombre_facultad|default:"-" }}</td>
                     <td>{{ estudiante.nombre_programa|default:"-" }}</td>
                     <td>{{ estudiante.estado_estudiante|default:"-" }}</td>
                     <td>{{ estudiante.limite_matriculas|default:"-" }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de estudiante">
+                            <a class="btn btn-outline-secondary" href="{% url 'academica:estudiante_detail' estudiante.id_estudiante %}">
+                                Ver
+                            </a>
+                            {% if can_create_students %}
+                                <a class="btn btn-outline-primary" href="{% url 'academica:estudiante_update' estudiante.id_estudiante %}">
+                                    Editar
+                                </a>
+                                <a class="btn btn-outline-danger" href="{% url 'academica:estudiante_deactivate' estudiante.id_estudiante %}">
+                                    Desactivar
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="7">No hay estudiantes registrados.</td>
+                    <td colspan="8">No hay estudiantes registrados.</td>
                 </tr>
             {% endfor %}
         </tbody>

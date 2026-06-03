@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Cancelar grupo{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:grupo_detail' grupo.id_grupo %}">Volver al detalle</a></p>
+
+<h1>Cancelar grupo</h1>
+
+<div class="alert alert-warning">
+    Esta accion no elimina fisicamente el registro. Solo cambia el estado del grupo a Cancelado en el nodo FDW correspondiente.
+</div>
+
+<dl>
+    <dt>Grupo</dt>
+    <dd>{{ grupo.codigo_grupo|default:grupo.id_grupo }}</dd>
+    <dt>Asignatura</dt>
+    <dd>{{ grupo.nombre_asignatura|default:"-" }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ grupo.nombre_facultad|default:grupo.id_facultad }}</dd>
+    <dt>Periodo</dt>
+    <dd>{{ grupo.id_periodo_academico|default:"-" }}</dd>
+    <dt>Estado actual</dt>
+    <dd>{{ grupo.estado_grupo|default:"-" }}</dd>
+</dl>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-danger" type="submit">
+            Cancelar grupo
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+            Volver
+        </a>
+    </div>
+</form>
+{% endblock %}

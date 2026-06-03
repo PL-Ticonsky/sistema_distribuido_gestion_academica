@@ -3,7 +3,18 @@
 {% block title %}Grupos academicos{% endblock %}
 
 {% block content %}
-<h1>Grupos academicos</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Grupos academicos</h1>
+        <p class="text-muted mb-0">Lectura consolidada desde reportes.vw_grupos_detalle.</p>
+    </div>
+    {% if can_create_groups %}
+        <a class="btn btn-primary" href="{% url 'academica:grupo_create' %}">
+            <i class="bi bi-plus-circle"></i>
+            Crear grupo
+        </a>
+    {% endif %}
+</div>
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
@@ -36,6 +47,7 @@
             <th>Cupo maximo</th>
             <th>Estado</th>
             <th>Profesor</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -46,14 +58,33 @@
                 <td>{{ grupo.nombre_facultad|default:"-" }}</td>
                 <td>{{ grupo.nombre_programa|default:"-" }}</td>
                 <td>{{ grupo.nombre_asignatura|default:"-" }}</td>
-                <td>{{ grupo.codigo_grupo|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+                        {{ grupo.codigo_grupo|default:grupo.id_grupo }}
+                    </a>
+                </td>
                 <td>{{ grupo.cupo_maximo }}</td>
                 <td>{{ grupo.estado_grupo }}</td>
                 <td>{{ grupo.profesor|default:"Sin asignar" }}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de grupo">
+                        <a class="btn btn-outline-secondary" href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+                            Ver
+                        </a>
+                        {% if can_create_groups %}
+                            <a class="btn btn-outline-primary" href="{% url 'academica:grupo_update' grupo.id_grupo %}">
+                                Editar
+                            </a>
+                            <a class="btn btn-outline-danger" href="{% url 'academica:grupo_cancel' grupo.id_grupo %}">
+                                Cancelar
+                            </a>
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="9">No hay grupos registrados.</td>
+                <td colspan="10">No hay grupos registrados.</td>
             </tr>
         {% endfor %}
     </tbody>
