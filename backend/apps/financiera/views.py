@@ -16,6 +16,14 @@ from apps.financiera.forms import (
     user_can_manage_financial,
 )
 from apps.financiera.models import MatriculaDetalle, Recibo, TarifaMatricula
+from apps.reportes.choices import (
+    distinct_choices,
+    estudiante_labels,
+    facultad_choices,
+    periodo_choices,
+    programa_choices,
+    recibo_labels,
+)
 
 
 class FinancialReadOnlyListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -62,6 +70,20 @@ class TarifaMatriculaListView(FinancialReadOnlyListView):
             "programa_academico__facultad",
             "periodo_academico",
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            TarifaMatricula,
+            "estado",
+            "Todos los estados",
+        )
+        return context
 
 
 class TarifaMatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -192,6 +214,22 @@ class ReciboListView(FinancialReadOnlyListView):
             "tarifa_matricula__periodo_academico",
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            Recibo,
+            "estado_pago",
+            "Todos los estados",
+        )
+        labels = estudiante_labels(
+            [recibo.id_estudiante for recibo in context["recibos"]],
+        )
+        for recibo in context["recibos"]:
+            recibo.estudiante_label = labels.get(recibo.id_estudiante)
+        return context
+
 
 class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     allowed_roles = FINANCIAL_ROLES
@@ -210,6 +248,8 @@ class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_manage_financial"] = user_can_manage_financial(self.request.user)
+        labels = estudiante_labels([self.object.id_estudiante])
+        context["estudiante_label"] = labels.get(self.object.id_estudiante)
         return context
 
 
@@ -308,13 +348,30 @@ class MatriculaListView(FinancialReadOnlyListView):
     context_object_name = "matriculas"
     filters = (
         "id_facultad",
-        "nombre_facultad",
         "id_programa_academico",
-        "nombre_programa",
         "id_periodo_academico",
         "estado_pago",
         "estado_matricula",
     )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_pago_choices"] = distinct_choices(
+            MatriculaDetalle,
+            "estado_pago",
+            "Todos los pagos",
+        )
+        context["estado_matricula_choices"] = distinct_choices(
+            MatriculaDetalle,
+            "estado_matricula",
+            "Todas las matriculas",
+        )
+        return context
 
 
 class MatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -327,6 +384,8 @@ class MatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_manage_financial"] = user_can_manage_financial(self.request.user)
+        labels = recibo_labels([self.object.id_recibo])
+        context["recibo_label"] = labels.get(self.object.id_recibo)
         return context
 
 

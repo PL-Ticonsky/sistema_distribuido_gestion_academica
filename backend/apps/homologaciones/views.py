@@ -13,6 +13,12 @@ from apps.homologaciones.forms import (
     HomologacionForm,
 )
 from apps.homologaciones.models import HomologacionGlobal
+from apps.reportes.choices import (
+    distinct_choices,
+    estudiante_labels,
+    facultad_choices,
+    profesor_labels,
+)
 
 
 class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -46,6 +52,28 @@ class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
             field: self.request.GET.get(field, "") for field in self.filters
         }
         context["can_write_homologaciones"] = True
+        context["facultad_choices"] = facultad_choices()
+        context["estado_choices"] = distinct_choices(
+            HomologacionGlobal,
+            "estado_homologacion",
+            "Todos los estados",
+        )
+        estudiantes = estudiante_labels(
+            [homologacion.id_estudiante for homologacion in context["homologaciones"]],
+        )
+        profesores = profesor_labels(
+            [
+                homologacion.id_profesor_evaluador
+                for homologacion in context["homologaciones"]
+            ],
+        )
+        for homologacion in context["homologaciones"]:
+            homologacion.estudiante_label = estudiantes.get(
+                homologacion.id_estudiante,
+            )
+            homologacion.profesor_label = profesores.get(
+                homologacion.id_profesor_evaluador,
+            )
         return context
 
 
@@ -67,6 +95,10 @@ class HomologacionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_write_homologaciones"] = True
+        estudiantes = estudiante_labels([self.object.id_estudiante])
+        profesores = profesor_labels([self.object.id_profesor_evaluador])
+        context["estudiante_label"] = estudiantes.get(self.object.id_estudiante)
+        context["profesor_label"] = profesores.get(self.object.id_profesor_evaluador)
         return context
 
 
@@ -75,6 +107,11 @@ class HomologacionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     form_class = HomologacionForm
     template_name = "homologaciones/homologacion_form.html"
     success_url = reverse_lazy("homologaciones:homologacion_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
+        return kwargs
 
     def form_valid(self, form):
         id_homologacion = form.save()
@@ -92,6 +129,8 @@ class HomologacionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear homologacion"
         context["submit_label"] = "Crear homologacion"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         return context
 
 

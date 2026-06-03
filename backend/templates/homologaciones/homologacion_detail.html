@@ -31,9 +31,9 @@
     <dt>Facultad</dt>
     <dd>{{ homologacion.id_facultad|default:"-" }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ homologacion.id_estudiante|default:"No disponible en la vista" }}</dd>
+    <dd>{{ estudiante_label|default:"No disponible en la vista" }}</dd>
     <dt>Profesor evaluador</dt>
-    <dd>{{ homologacion.id_profesor_evaluador|default:"No disponible en la vista" }}</dd>
+    <dd>{{ profesor_label|default:"No disponible en la vista" }}</dd>
     <dt>Asignatura origen</dt>
     <dd>{{ homologacion.asignatura_origen|default:"-" }}</dd>
     <dt>Institucion origen</dt>

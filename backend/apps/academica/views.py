@@ -27,6 +27,12 @@ from apps.accounts.access import (
 )
 from apps.auditoria.services import registrar_auditoria
 from apps.estructura.models import Asignatura
+from apps.reportes.choices import (
+    distinct_choices,
+    facultad_choices,
+    periodo_choices,
+    programa_choices,
+)
 from apps.reportes.models import (
     EstudianteDetalle,
     GrupoDetalle,
@@ -68,6 +74,11 @@ class AsignaturaListView(AcademicReportListView):
     context_object_name = "asignaturas"
     filters = ("estado",)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["estado_choices"] = distinct_choices(Asignatura, "estado", "Todos")
+        return context
+
 
 class EstudianteListView(AcademicReportListView):
     allowed_roles = STUDENT_ROLES
@@ -76,15 +87,22 @@ class EstudianteListView(AcademicReportListView):
     context_object_name = "estudiantes"
     filters = (
         "id_facultad",
-        "nombre_facultad",
         "id_programa_academico",
-        "nombre_programa",
         "estado_estudiante",
     )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_create_students"] = user_can_create_students(self.request.user)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["estado_choices"] = distinct_choices(
+            EstudianteDetalle,
+            "estado_estudiante",
+            "Todos los estados",
+        )
         return context
 
 
@@ -110,6 +128,7 @@ class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
         return kwargs
 
     def form_valid(self, form):
@@ -128,6 +147,8 @@ class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear estudiante"
         context["submit_label"] = "Crear estudiante"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         return context
 
 
@@ -148,6 +169,7 @@ class EstudianteUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         kwargs["estudiante"] = self.estudiante
+        kwargs["selected_facultad"] = self.estudiante.id_facultad
         return kwargs
 
     def form_valid(self, form):
@@ -219,7 +241,22 @@ class ProfesorListView(AcademicReportListView):
     model = ProfesorDetalle
     template_name = "academica/profesor_list.html"
     context_object_name = "profesores"
-    filters = ("id_facultad", "nombre_facultad", "categoria", "vinculacion")
+    filters = ("id_facultad", "categoria", "vinculacion")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["categoria_choices"] = distinct_choices(
+            ProfesorDetalle,
+            "categoria",
+            "Todas las categorias",
+        )
+        context["vinculacion_choices"] = distinct_choices(
+            ProfesorDetalle,
+            "vinculacion",
+            "Todas las vinculaciones",
+        )
+        return context
 
 
 class GrupoListView(AcademicReportListView):
@@ -229,9 +266,7 @@ class GrupoListView(AcademicReportListView):
     context_object_name = "grupos"
     filters = (
         "id_facultad",
-        "nombre_facultad",
         "id_programa_academico",
-        "nombre_programa",
         "id_periodo_academico",
         "estado_grupo",
     )
@@ -239,6 +274,16 @@ class GrupoListView(AcademicReportListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_create_groups"] = user_can_create_groups(self.request.user)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            GrupoDetalle,
+            "estado_grupo",
+            "Todos los estados",
+        )
         return context
 
 
@@ -264,6 +309,7 @@ class GrupoCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
         return kwargs
 
     def form_valid(self, form):
@@ -282,6 +328,8 @@ class GrupoCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear grupo"
         context["submit_label"] = "Crear grupo"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         return context
 
 
@@ -299,6 +347,7 @@ class GrupoUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         kwargs["grupo"] = self.grupo
+        kwargs["selected_facultad"] = self.grupo.id_facultad
         return kwargs
 
     def form_valid(self, form):
@@ -363,9 +412,7 @@ class InscripcionListView(AcademicReportListView):
     context_object_name = "inscripciones"
     filters = (
         "id_facultad",
-        "nombre_facultad",
         "id_programa_academico",
-        "nombre_programa",
         "id_periodo_academico",
         "estado_inscripcion",
     )
@@ -374,6 +421,16 @@ class InscripcionListView(AcademicReportListView):
         context = super().get_context_data(**kwargs)
         context["can_write_enrollments"] = user_can_write_enrollments(
             self.request.user,
+        )
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            InscripcionDetalle,
+            "estado_inscripcion",
+            "Todos los estados",
         )
         return context
 
@@ -402,6 +459,8 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
+        kwargs["selected_periodo"] = self.request.GET.get("id_periodo_academico")
         return kwargs
 
     def form_valid(self, form):
@@ -420,6 +479,13 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear inscripcion"
         context["submit_label"] = "Crear inscripcion"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["periodo_choices"] = periodo_choices("Seleccione periodo")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
+        context["selected_periodo"] = self.request.GET.get(
+            "id_periodo_academico",
+            "",
+        )
         return context
 
 
@@ -440,6 +506,8 @@ class InscripcionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         kwargs["inscripcion"] = self.inscripcion
+        kwargs["selected_facultad"] = self.inscripcion.id_facultad
+        kwargs["selected_periodo"] = self.inscripcion.id_periodo_academico
         return kwargs
 
     def form_valid(self, form):

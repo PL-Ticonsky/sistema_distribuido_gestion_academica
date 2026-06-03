@@ -18,6 +18,21 @@
     </div>
 {% endif %}
 
+{% if facultad_choices %}
+    <form class="row g-2 mb-3" method="get">
+        <div class="col-12 col-md-4">
+            <select class="form-select" name="id_facultad">
+                {% for value, label in facultad_choices %}
+                    <option value="{{ value }}" {% if selected_facultad == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-auto">
+            <button class="btn btn-outline-primary" type="submit">Aplicar facultad</button>
+        </div>
+    </form>
+{% endif %}
+
 <form method="post">
     {% csrf_token %}
     <div class="row g-3">

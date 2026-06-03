@@ -31,6 +31,26 @@ def _choice_rows(sql, params=None):
         return cursor.fetchall()
 
 
+def _data_value(data, field):
+    if not data:
+        return None
+    return data.get(field) or None
+
+
+def _facultad_for_student(id_estudiante):
+    if not id_estudiante:
+        return None
+    rows = _choice_rows(
+        """
+        select id_facultad
+        from reportes.vw_estudiantes_detalle
+        where id_estudiante = %s
+        """,
+        [id_estudiante],
+    )
+    return rows[0][0] if rows else None
+
+
 class HomologacionForm(forms.Form):
     id_estudiante = forms.ModelChoiceField(
         label="Estudiante",
@@ -54,17 +74,31 @@ class HomologacionForm(forms.Form):
         initial="Solicitada",
     )
 
-    def __init__(self, *args, homologacion=None, **kwargs):
+    def __init__(self, *args, homologacion=None, selected_facultad=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.homologacion = homologacion
-        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+        selected_student = _data_value(self.data, "id_estudiante")
+        selected_facultad = (
+            _facultad_for_student(selected_student)
+            or selected_facultad
+            or getattr(homologacion, "id_facultad", None)
+        )
+        student_queryset = EstudianteDetalle.objects.order_by(
             "nombre_facultad",
             "nombre_programa",
             "estudiante",
         )
-        self.fields[
-            "id_profesor_evaluador"
-        ].queryset = ProfesorDetalle.objects.order_by("nombre_facultad", "profesor")
+        professor_queryset = ProfesorDetalle.objects.order_by(
+            "nombre_facultad",
+            "profesor",
+        )
+        if selected_facultad:
+            student_queryset = student_queryset.filter(id_facultad=selected_facultad)
+            professor_queryset = professor_queryset.filter(
+                id_facultad=selected_facultad,
+            )
+        self.fields["id_estudiante"].queryset = student_queryset
+        self.fields["id_profesor_evaluador"].queryset = professor_queryset
         self.fields["id_estudiante"].label_from_instance = (
             lambda student: (
                 f"{student.nombre_facultad} - {student.estudiante} "
@@ -72,10 +106,13 @@ class HomologacionForm(forms.Form):
             )
         )
         self.fields["id_profesor_evaluador"].label_from_instance = (
-            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+            lambda professor: (
+                f"{professor.nombre_facultad} - {professor.profesor} "
+                f"<{professor.correo}>"
+            )
         )
         self.fields["id_programa_asignatura"].choices = (
-            self._programa_asignatura_choices()
+            self._programa_asignatura_choices(selected_facultad)
         )
 
         for field in self.fields.values():
@@ -97,9 +134,14 @@ class HomologacionForm(forms.Form):
                 "estado_homologacion"
             ].initial = homologacion.estado_homologacion
 
-    def _programa_asignatura_choices(self):
+    def _programa_asignatura_choices(self, selected_facultad=None):
+        where = ["pa.estado = 'Activa'"]
+        params = []
+        if selected_facultad:
+            where.append("pa.id_facultad = %s")
+            params.append(selected_facultad)
         rows = _choice_rows(
-            """
+            f"""
             select
                 pa.id_programa_asignatura::text,
                 pa.id_facultad,
@@ -108,9 +150,10 @@ class HomologacionForm(forms.Form):
             from reportes.vw_programa_asignatura_global pa
             left join institucional.asignatura a
               on a.cod_asignatura = pa.cod_asignatura
-            where pa.estado = 'Activa'
+            where {" and ".join(where)}
             order by pa.id_facultad, pa.id_programa_academico, asignatura
             """,
+            params,
         )
         return [
             ("", "Seleccione una asignatura"),

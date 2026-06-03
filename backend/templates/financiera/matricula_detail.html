@@ -37,7 +37,7 @@
     <dt>Fecha pago</dt>
     <dd>{{ matricula.fecha_pago|default:"-" }}</dd>
     <dt>ID recibo</dt>
-    <dd>{{ matricula.id_recibo }}</dd>
+    <dd>{{ recibo_label|default:matricula.id_recibo }}</dd>
 </dl>
 
 <p>

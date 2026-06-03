@@ -18,16 +18,32 @@
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+        <select class="form-select" name="id_facultad">
+            {% for value, label in facultad_choices %}
+                <option value="{{ value }}" {% if active_filters.id_facultad == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="nombre_programa" value="{{ active_filters.nombre_programa }}" placeholder="Programa">
+        <select class="form-select" name="id_programa_academico">
+            {% for value, label in programa_choices %}
+                <option value="{{ value }}" {% if active_filters.id_programa_academico == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-2">
-        <input class="form-control" type="text" name="id_periodo_academico" value="{{ active_filters.id_periodo_academico }}" placeholder="Periodo">
+        <select class="form-select" name="id_periodo_academico">
+            {% for value, label in periodo_choices %}
+                <option value="{{ value }}" {% if active_filters.id_periodo_academico == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-2">
-        <input class="form-control" type="text" name="estado_grupo" value="{{ active_filters.estado_grupo }}" placeholder="Estado">
+        <select class="form-select" name="estado_grupo">
+            {% for value, label in estado_choices %}
+                <option value="{{ value }}" {% if active_filters.estado_grupo == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>

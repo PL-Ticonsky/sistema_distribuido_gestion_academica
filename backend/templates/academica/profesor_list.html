@@ -7,13 +7,25 @@
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+        <select class="form-select" name="id_facultad">
+            {% for value, label in facultad_choices %}
+                <option value="{{ value }}" {% if active_filters.id_facultad == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="categoria" value="{{ active_filters.categoria }}" placeholder="Categoria">
+        <select class="form-select" name="categoria">
+            {% for value, label in categoria_choices %}
+                <option value="{{ value }}" {% if active_filters.categoria == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="vinculacion" value="{{ active_filters.vinculacion }}" placeholder="Vinculacion">
+        <select class="form-select" name="vinculacion">
+            {% for value, label in vinculacion_choices %}
+                <option value="{{ value }}" {% if active_filters.vinculacion == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>

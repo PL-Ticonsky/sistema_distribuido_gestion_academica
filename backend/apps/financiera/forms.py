@@ -19,6 +19,7 @@ from apps.financiera.distributed_write import (
     update_tarifa,
 )
 from apps.financiera.models import MatriculaDetalle, Recibo, TarifaMatricula
+from apps.reportes.choices import estudiante_labels
 from apps.reportes.models import EstudianteDetalle
 
 TARIFA_STATUS_CHOICES = (
@@ -314,9 +315,12 @@ class MatriculaForm(forms.Form):
         elif matricula.id_recibo:
             recibos = Recibo.objects.filter(pk=matricula.id_recibo) | recibos
         self.fields["id_recibo"].queryset = recibos.distinct()
+        labels = estudiante_labels(
+            self.fields["id_recibo"].queryset.values_list("id_estudiante", flat=True),
+        )
         self.fields["id_recibo"].label_from_instance = (
             lambda recibo: (
-                f"{recibo.id_estudiante} - "
+                f"{labels.get(recibo.id_estudiante, recibo.id_estudiante)} - "
                 f"{recibo.tarifa_matricula.programa_academico.nombre_programa} - "
                 f"{recibo.tarifa_matricula.periodo_academico_id}"
             )

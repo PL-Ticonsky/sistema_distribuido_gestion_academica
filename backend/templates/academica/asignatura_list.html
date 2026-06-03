@@ -7,7 +7,11 @@
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-4">
-        <input class="form-control" type="text" name="estado" value="{{ active_filters.estado }}" placeholder="Estado">
+        <select class="form-select" name="estado">
+            {% for value, label in estado_choices %}
+                <option value="{{ value }}" {% if active_filters.estado == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>

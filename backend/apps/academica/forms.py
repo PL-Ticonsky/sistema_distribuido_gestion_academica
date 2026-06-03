@@ -72,6 +72,45 @@ def _choice_rows(sql, params=None):
         return cursor.fetchall()
 
 
+def _candidate_user_ids():
+    rows = _choice_rows(
+        """
+        select u.id_usuario
+        from reportes.vw_usuarios_global u
+        where u.is_active = true
+          and not exists (
+              select 1
+              from reportes.vw_estudiantes_detalle e
+              where e.id_usuario = u.id_usuario
+          )
+          and not exists (
+              select 1
+              from reportes.vw_profesores_detalle p
+              where p.id_usuario = u.id_usuario
+          )
+          and not exists (
+              select 1
+              from public.usuario_groups ug
+              join public.auth_group g on g.id = ug.group_id
+              where ug.customuser_id = u.id_usuario
+                and g.name in ('docente', 'administrativo', 'decano')
+          )
+          and lower(u.correo) not like %s
+          and lower(u.nombre) not like %s
+          and lower(u.correo) not like %s
+        order by u.nombre, u.correo
+        """,
+        ["admin.%", "administrativo%", "%docente%"],
+    )
+    return [row[0] for row in rows]
+
+
+def _selected_value(data, field):
+    if not data:
+        return None
+    return data.get(field) or None
+
+
 class EstudianteCreateForm(forms.Form):
     id_usuario = forms.ModelChoiceField(
         label="Usuario",
@@ -98,15 +137,20 @@ class EstudianteCreateForm(forms.Form):
         initial="Activo",
     )
 
-    def __init__(self, *args, user, estudiante=None, **kwargs):
+    def __init__(self, *args, user, estudiante=None, selected_facultad=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.estudiante = estudiante
+        selected_facultad = _selected_value(self.data, "id_facultad") or (
+            selected_facultad
+        )
 
         faculty_queryset = Facultad.objects.all()
         program_queryset = ProgramaAcademico.objects.select_related("facultad").filter(
             estado="Activo",
         )
+        if selected_facultad:
+            program_queryset = program_queryset.filter(facultad_id=selected_facultad)
         if not is_superadmin(user):
             coordinated_program_ids = get_coordinated_program_ids(user)
             program_queryset = program_queryset.filter(
@@ -119,12 +163,18 @@ class EstudianteCreateForm(forms.Form):
         self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
             "nombre_facultad",
         )
+        if selected_facultad:
+            self.fields["id_facultad"].initial = selected_facultad
         self.fields["id_programa_academico"].queryset = program_queryset.order_by(
             "nombre_programa",
         )
-        self.fields["id_usuario"].queryset = UsuarioGlobal.objects.filter(
-            is_active=True,
-        ).order_by("nombre", "correo")
+        candidate_ids = _candidate_user_ids()
+        user_queryset = UsuarioGlobal.objects.filter(id_usuario__in=candidate_ids)
+        if estudiante is not None and estudiante.id_usuario:
+            user_queryset = user_queryset | UsuarioGlobal.objects.filter(
+                id_usuario=estudiante.id_usuario,
+            )
+        self.fields["id_usuario"].queryset = user_queryset.order_by("nombre", "correo")
         self.fields["id_usuario"].label_from_instance = (
             lambda user: f"{user.nombre} <{user.correo}>"
         )
@@ -222,10 +272,13 @@ class GrupoCreateForm(forms.Form):
         initial="Abierto",
     )
 
-    def __init__(self, *args, user, grupo=None, **kwargs):
+    def __init__(self, *args, user, grupo=None, selected_facultad=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.grupo = grupo
+        selected_facultad = _selected_value(self.data, "id_facultad") or (
+            selected_facultad
+        )
 
         faculty_queryset = Facultad.objects.all()
         program_ids = None
@@ -238,6 +291,8 @@ class GrupoCreateForm(forms.Form):
         self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
             "nombre_facultad",
         )
+        if selected_facultad:
+            self.fields["id_facultad"].initial = selected_facultad
         self.fields["id_periodo_academico"].queryset = (
             PeriodoAcademico.objects.order_by(
                 "-fecha_inicio",
@@ -245,9 +300,9 @@ class GrupoCreateForm(forms.Form):
             )
         )
         self.fields["id_programa_asignatura"].choices = (
-            self._programa_asignatura_choices(program_ids)
+            self._programa_asignatura_choices(program_ids, selected_facultad)
         )
-        self.fields["id_profesor"].choices = self._profesor_choices()
+        self.fields["id_profesor"].choices = self._profesor_choices(selected_facultad)
 
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
@@ -264,9 +319,12 @@ class GrupoCreateForm(forms.Form):
             self.fields["cupo_maximo"].initial = grupo.cupo_maximo
             self.fields["estado_grupo"].initial = grupo.estado_grupo
 
-    def _programa_asignatura_choices(self, program_ids):
+    def _programa_asignatura_choices(self, program_ids, selected_facultad=None):
         where = ["pa.estado = 'Activa'"]
         params = []
+        if selected_facultad:
+            where.append("pa.id_facultad = %s")
+            params.append(selected_facultad)
         if program_ids is not None:
             if not program_ids:
                 return [("", "Seleccione una asignatura")]
@@ -298,13 +356,21 @@ class GrupoCreateForm(forms.Form):
             ],
         ]
 
-    def _profesor_choices(self):
+    def _profesor_choices(self, selected_facultad=None):
+        where = []
+        params = []
+        if selected_facultad:
+            where.append("id_facultad = %s")
+            params.append(selected_facultad)
+        where_sql = f"where {' and '.join(where)}" if where else ""
         rows = _choice_rows(
-            """
-            select id_profesor::text, id_facultad, coalesce(profesor, id_profesor::text)
+            f"""
+            select id_profesor::text, id_facultad, coalesce(profesor, correo)
             from reportes.vw_profesores_detalle
+            {where_sql}
             order by id_facultad, profesor
             """,
+            params,
         )
         return [
             ("", "Sin asignar"),
@@ -437,19 +503,40 @@ class InscripcionCreateForm(forms.Form):
         required=False,
     )
 
-    def __init__(self, *args, user, inscripcion=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        user,
+        inscripcion=None,
+        selected_facultad=None,
+        selected_periodo=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.user = user
         self.inscripcion = inscripcion
-
-        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
-            "nombre_facultad",
-            "nombre_programa",
-            "estudiante",
+        selected_facultad = _selected_value(self.data, "id_facultad") or (
+            selected_facultad
         )
-        self.fields["id_grupo"].queryset = GrupoDetalle.objects.exclude(
+        selected_periodo = _selected_value(self.data, "id_periodo_academico") or (
+            selected_periodo
+        )
+
+        student_queryset = EstudianteDetalle.objects.order_by(
+            "nombre_facultad", "nombre_programa", "estudiante"
+        )
+        group_queryset = GrupoDetalle.objects.exclude(
             estado_grupo="Cancelado",
-        ).order_by(
+        )
+        if selected_facultad:
+            student_queryset = student_queryset.filter(id_facultad=selected_facultad)
+            group_queryset = group_queryset.filter(id_facultad=selected_facultad)
+        if selected_periodo:
+            group_queryset = group_queryset.filter(
+                id_periodo_academico=selected_periodo,
+            )
+        self.fields["id_estudiante"].queryset = student_queryset
+        self.fields["id_grupo"].queryset = group_queryset.order_by(
             "nombre_facultad",
             "id_periodo_academico",
             "nombre_asignatura",
@@ -458,13 +545,14 @@ class InscripcionCreateForm(forms.Form):
         self.fields["id_estudiante"].label_from_instance = (
             lambda student: (
                 f"{student.nombre_facultad} - {student.estudiante} "
-                f"({student.nombre_programa})"
+                f"({student.nombre_programa}) - {student.correo}"
             )
         )
         self.fields["id_grupo"].label_from_instance = (
             lambda group: (
                 f"{group.nombre_facultad} - {group.id_periodo_academico} - "
-                f"{group.nombre_asignatura} - {group.codigo_grupo}"
+                f"{group.nombre_programa} - {group.nombre_asignatura} - "
+                f"Grupo {group.codigo_grupo}"
             )
         )
 
