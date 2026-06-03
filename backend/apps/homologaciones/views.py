@@ -6,6 +6,7 @@ from django.views.generic import DetailView, FormView, ListView, TemplateView
 
 from apps.academica.distributed_write import cancel_homologacion
 from apps.accounts.access import HOMOLOGATION_ROLES, RoleRequiredMixin
+from apps.auditoria.services import registrar_auditoria
 from apps.homologaciones.forms import (
     HomologacionAssignEvaluatorForm,
     HomologacionEvaluateForm,
@@ -76,8 +77,14 @@ class HomologacionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     success_url = reverse_lazy("homologaciones:homologacion_list")
 
     def form_valid(self, form):
-        form.save()
-        # TODO: registrar auditoria distribuida cuando se consolide el contrato.
+        id_homologacion = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_HOMOLOGACION",
+            f"Homologacion creada: {id_homologacion}",
+            esquema_afectado="fdw_*",
+            tabla_afectada="homologacion",
+        )
         messages.success(self.request, "Homologacion creada en el nodo distribuido.")
         return super().form_valid(form)
 
@@ -109,6 +116,13 @@ class HomologacionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_HOMOLOGACION",
+                f"Homologacion actualizada: {self.homologacion.id_homologacion}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="homologacion",
+            )
             messages.success(
                 self.request,
                 "Homologacion actualizada en el nodo distribuido.",
@@ -149,6 +163,16 @@ class HomologacionAssignEvaluatorView(LoginRequiredMixin, RoleRequiredMixin, For
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "ASIGNAR_EVALUADOR_HOMOLOGACION",
+                (
+                    "Evaluador asignado a homologacion: "
+                    f"{self.homologacion.id_homologacion}"
+                ),
+                esquema_afectado="fdw_*",
+                tabla_afectada="homologacion",
+            )
             messages.success(self.request, "Evaluador asignado.")
         else:
             messages.warning(self.request, "No se encontro la homologacion.")
@@ -181,6 +205,13 @@ class HomologacionEvaluateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EVALUAR_HOMOLOGACION",
+                f"Homologacion evaluada: {self.homologacion.id_homologacion}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="homologacion",
+            )
             messages.success(self.request, "Homologacion evaluada.")
         else:
             messages.warning(self.request, "No se encontro la homologacion.")
@@ -209,6 +240,13 @@ class HomologacionCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView
             id_facultad=self.homologacion.id_facultad,
         )
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "CANCELAR_HOMOLOGACION",
+                f"Homologacion cancelada: {self.homologacion.id_homologacion}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="homologacion",
+            )
             messages.success(request, "Homologacion marcada como Cancelada.")
         else:
             messages.warning(request, "No se encontro la homologacion para cancelar.")

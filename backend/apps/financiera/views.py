@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, TemplateView
 
 from apps.accounts.access import FINANCIAL_ROLES, RoleRequiredMixin
+from apps.auditoria.services import registrar_auditoria
 from apps.financiera.forms import (
     MatriculaForm,
     ReciboForm,
@@ -89,7 +90,14 @@ class TarifaMatriculaCreateView(FinancialManageMixin, FormView):
     success_url = reverse_lazy("financiera:tarifa_list")
 
     def form_valid(self, form):
-        form.save()
+        id_tarifa = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_TARIFA",
+            f"Tarifa creada: {id_tarifa}",
+            esquema_afectado="financiero",
+            tabla_afectada="tarifa_matricula",
+        )
         messages.success(self.request, "Tarifa creada en financiero.tarifa_matricula.")
         return super().form_valid(form)
 
@@ -120,6 +128,13 @@ class TarifaMatriculaUpdateView(FinancialManageMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_TARIFA",
+                f"Tarifa actualizada: {self.tarifa.id_tarifa_matricula}",
+                esquema_afectado="financiero",
+                tabla_afectada="tarifa_matricula",
+            )
             messages.success(self.request, "Tarifa actualizada.")
         else:
             messages.warning(self.request, "No se encontro la tarifa.")
@@ -146,6 +161,13 @@ class TarifaMatriculaDeactivateView(FinancialManageMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         updated_rows = deactivate_tarifa_from_instance(self.tarifa)
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "DESACTIVAR_TARIFA",
+                f"Tarifa desactivada: {self.tarifa.id_tarifa_matricula}",
+                esquema_afectado="financiero",
+                tabla_afectada="tarifa_matricula",
+            )
             messages.success(request, "Tarifa marcada como Inactiva.")
         else:
             messages.warning(request, "No se encontro la tarifa.")
@@ -197,7 +219,14 @@ class ReciboCreateView(FinancialManageMixin, FormView):
     success_url = reverse_lazy("financiera:recibo_list")
 
     def form_valid(self, form):
-        form.save()
+        id_recibo = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_RECIBO",
+            f"Recibo creado: {id_recibo}",
+            esquema_afectado="financiero",
+            tabla_afectada="recibo",
+        )
         messages.success(self.request, "Recibo creado en financiero.recibo.")
         return super().form_valid(form)
 
@@ -225,6 +254,13 @@ class ReciboUpdateView(FinancialManageMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_RECIBO",
+                f"Recibo actualizado: {self.recibo.id_recibo}",
+                esquema_afectado="financiero",
+                tabla_afectada="recibo",
+            )
             messages.success(self.request, "Recibo actualizado.")
         else:
             messages.warning(self.request, "No se encontro el recibo.")
@@ -248,6 +284,13 @@ class ReciboAnularView(FinancialManageMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         updated_rows = anular_recibo_from_instance(self.recibo)
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "ANULAR_RECIBO",
+                f"Recibo anulado: {self.recibo.id_recibo}",
+                esquema_afectado="financiero",
+                tabla_afectada="recibo",
+            )
             messages.success(request, "Recibo marcado como Anulado.")
         else:
             messages.warning(request, "No se encontro el recibo.")
@@ -293,7 +336,14 @@ class MatriculaCreateView(FinancialManageMixin, FormView):
     success_url = reverse_lazy("financiera:matricula_list")
 
     def form_valid(self, form):
-        form.save()
+        id_matricula = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_MATRICULA",
+            f"Matricula creada: {id_matricula}",
+            esquema_afectado="fdw_*",
+            tabla_afectada="matricula",
+        )
         messages.success(self.request, "Matricula creada en el nodo distribuido.")
         return super().form_valid(form)
 
@@ -324,6 +374,13 @@ class MatriculaUpdateView(FinancialManageMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_MATRICULA",
+                f"Matricula actualizada: {self.matricula.id_matricula}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="matricula",
+            )
             messages.success(self.request, "Matricula actualizada.")
         else:
             messages.warning(self.request, "No se encontro la matricula.")
@@ -350,6 +407,13 @@ class MatriculaCancelarView(FinancialManageMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         updated_rows = cancel_matricula_from_instance(self.matricula)
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "CANCELAR_MATRICULA",
+                f"Matricula cancelada: {self.matricula.id_matricula}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="matricula",
+            )
             messages.success(request, "Matricula marcada como Cancelada.")
         else:
             messages.warning(request, "No se encontro la matricula.")

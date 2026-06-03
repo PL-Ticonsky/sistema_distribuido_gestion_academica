@@ -25,6 +25,7 @@ from apps.accounts.access import (
     TEACHING_ROLES,
     RoleRequiredMixin,
 )
+from apps.auditoria.services import registrar_auditoria
 from apps.estructura.models import Asignatura
 from apps.reportes.models import (
     EstudianteDetalle,
@@ -112,8 +113,14 @@ class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         return kwargs
 
     def form_valid(self, form):
-        form.save()
-        # TODO: registrar auditoria distribuida cuando se consolide el contrato.
+        id_estudiante = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_ESTUDIANTE",
+            f"Estudiante creado: {id_estudiante}",
+            esquema_afectado="fdw_*",
+            tabla_afectada="estudiante",
+        )
         messages.success(self.request, "Estudiante creado en el nodo distribuido.")
         return super().form_valid(form)
 
@@ -146,6 +153,13 @@ class EstudianteUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_ESTUDIANTE",
+                f"Estudiante actualizado: {self.estudiante.id_estudiante}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="estudiante",
+            )
             messages.success(
                 self.request,
                 "Estudiante actualizado en el nodo distribuido.",
@@ -182,6 +196,13 @@ class EstudianteDeactivateView(LoginRequiredMixin, RoleRequiredMixin, TemplateVi
             id_facultad=self.estudiante.id_facultad,
         )
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "DESACTIVAR_ESTUDIANTE",
+                f"Estudiante desactivado: {self.estudiante.id_estudiante}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="estudiante",
+            )
             messages.success(request, "Estudiante marcado como Inactivo.")
         else:
             messages.warning(request, "No se encontro el estudiante para desactivar.")
@@ -246,8 +267,14 @@ class GrupoCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         return kwargs
 
     def form_valid(self, form):
-        form.save()
-        # TODO: registrar auditoria distribuida cuando se consolide el contrato.
+        id_grupo = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_GRUPO",
+            f"Grupo creado: {id_grupo}",
+            esquema_afectado="fdw_*",
+            tabla_afectada="grupo",
+        )
         messages.success(self.request, "Grupo creado en el nodo distribuido.")
         return super().form_valid(form)
 
@@ -277,6 +304,13 @@ class GrupoUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_GRUPO",
+                f"Grupo actualizado: {self.grupo.id_grupo}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="grupo",
+            )
             messages.success(self.request, "Grupo actualizado en el nodo distribuido.")
         else:
             messages.warning(self.request, "No se encontro el grupo para actualizar.")
@@ -304,6 +338,13 @@ class GrupoCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
             id_facultad=self.grupo.id_facultad,
         )
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "CANCELAR_GRUPO",
+                f"Grupo cancelado: {self.grupo.id_grupo}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="grupo",
+            )
             messages.success(request, "Grupo marcado como Cancelado.")
         else:
             messages.warning(request, "No se encontro el grupo para cancelar.")
@@ -364,8 +405,14 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         return kwargs
 
     def form_valid(self, form):
-        form.save()
-        # TODO: registrar auditoria distribuida cuando se consolide el contrato.
+        id_inscripcion = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_INSCRIPCION",
+            f"Inscripcion creada: {id_inscripcion}",
+            esquema_afectado="fdw_*",
+            tabla_afectada="inscripcion",
+        )
         messages.success(self.request, "Inscripcion creada en el nodo distribuido.")
         return super().form_valid(form)
 
@@ -398,6 +445,13 @@ class InscripcionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def form_valid(self, form):
         updated_rows = form.save()
         if updated_rows:
+            registrar_auditoria(
+                self.request.user,
+                "EDITAR_INSCRIPCION",
+                f"Inscripcion actualizada: {self.inscripcion.id_inscripcion}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="inscripcion",
+            )
             messages.success(
                 self.request,
                 "Inscripcion actualizada en el nodo distribuido.",
@@ -434,6 +488,13 @@ class InscripcionCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView)
             id_facultad=self.inscripcion.id_facultad,
         )
         if updated_rows:
+            registrar_auditoria(
+                request.user,
+                "CANCELAR_INSCRIPCION",
+                f"Inscripcion cancelada: {self.inscripcion.id_inscripcion}",
+                esquema_afectado="fdw_*",
+                tabla_afectada="inscripcion",
+            )
             messages.success(request, "Inscripcion marcada como Cancelada.")
         else:
             messages.warning(request, "No se encontro la inscripcion para cancelar.")

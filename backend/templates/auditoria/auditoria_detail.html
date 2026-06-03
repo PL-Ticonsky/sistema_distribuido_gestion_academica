@@ -16,6 +16,10 @@
     <dd>{{ registro.accion_realizada }}</dd>
     <dt>Fecha y hora</dt>
     <dd>{{ registro.fecha_hora }}</dd>
+    <dt>Esquema afectado</dt>
+    <dd>{{ registro.esquema_afectado|default:"-" }}</dd>
+    <dt>Tabla afectada</dt>
+    <dd>{{ registro.tabla_afectada|default:"-" }}</dd>
     <dt>Descripcion completa</dt>
     <dd>{{ registro.descripcion|default:"-" }}</dd>
 </dl>
