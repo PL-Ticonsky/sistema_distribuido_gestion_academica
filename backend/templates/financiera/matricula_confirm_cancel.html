@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Cancelar matricula{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">Volver a matricula</a></p>
+
+<h1>Cancelar matricula</h1>
+<p>La matricula se marcara como Cancelada en el nodo distribuido correspondiente.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Cancelar matricula</button>
+    <a class="btn btn-outline-secondary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">Volver</a>
+</form>
+{% endblock %}

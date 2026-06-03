@@ -9,47 +9,39 @@
     <h1 class="mb-0">Matricula</h1>
     {% if can_manage_financial %}
         <div class="d-flex flex-wrap gap-2">
-            <form method="post" action="{% url 'financiera:matricula_activar' matricula.id_matricula %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-success" type="submit">Activar</button>
-            </form>
-            <form method="post" action="{% url 'financiera:matricula_finalizar' matricula.id_matricula %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-primary" type="submit">Finalizar</button>
-            </form>
-            <form method="post" action="{% url 'financiera:matricula_cancelar' matricula.id_matricula %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-secondary" type="submit">Cancelar</button>
-            </form>
-            <form method="post" action="{% url 'financiera:matricula_anular' matricula.id_matricula %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-danger" type="submit">Anular</button>
-            </form>
+            <a class="btn btn-outline-primary" href="{% url 'financiera:matricula_update' matricula.id_matricula %}">Editar matricula</a>
+            {% if matricula.estado_matricula != "Cancelada" %}
+                <a class="btn btn-outline-danger" href="{% url 'financiera:matricula_cancelar' matricula.id_matricula %}">Cancelar matricula</a>
+            {% endif %}
         </div>
     {% endif %}
 </div>
 
 <dl class="row">
+    <dt>ID matricula</dt>
+    <dd>{{ matricula.id_matricula }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}</dd>
-    <dt>Correo</dt>
-    <dd>{{ matricula.recibo.estudiante.usuario.correo|default:"-" }}</dd>
+    <dd>{{ matricula.estudiante|default:matricula.id_estudiante }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ matricula.nombre_facultad|default:matricula.id_facultad }}</dd>
     <dt>Programa</dt>
-    <dd>{{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}</dd>
+    <dd>{{ matricula.nombre_programa|default:"-" }}</dd>
     <dt>Periodo</dt>
-    <dd>{{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</dd>
+    <dd>{{ matricula.id_periodo_academico|default:"-" }}</dd>
     <dt>Estado matricula</dt>
     <dd>{{ matricula.estado_matricula }}</dd>
     <dt>Estado pago</dt>
-    <dd>{{ matricula.recibo.estado_pago }}</dd>
-    <dt>Valor matricula</dt>
-    <dd>{{ matricula.recibo.tarifa_matricula.valor_matricula }}</dd>
+    <dd>{{ matricula.estado_pago }}</dd>
     <dt>Valor pagado</dt>
-    <dd>{{ matricula.recibo.valor_pagado|default:"-" }}</dd>
+    <dd>{{ matricula.valor_pagado|default:"-" }}</dd>
+    <dt>Fecha pago</dt>
+    <dd>{{ matricula.fecha_pago|default:"-" }}</dd>
+    <dt>ID recibo</dt>
+    <dd>{{ matricula.id_recibo }}</dd>
 </dl>
 
 <p>
-    <a href="{% url 'financiera:recibo_detail' matricula.recibo.id_recibo %}">
+    <a href="{% url 'financiera:recibo_detail' matricula.id_recibo %}">
         Ver recibo asociado
     </a>
 </p>

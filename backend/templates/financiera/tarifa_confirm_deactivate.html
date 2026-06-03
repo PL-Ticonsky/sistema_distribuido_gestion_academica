@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Desactivar tarifa{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:tarifa_detail' tarifa.id_tarifa_matricula %}">Volver a tarifa</a></p>
+
+<h1>Desactivar tarifa</h1>
+<p>La tarifa se marcara como Inactiva.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Desactivar tarifa</button>
+    <a class="btn btn-outline-secondary" href="{% url 'financiera:tarifa_detail' tarifa.id_tarifa_matricula %}">Cancelar</a>
+</form>
+{% endblock %}

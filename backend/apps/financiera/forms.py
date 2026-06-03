@@ -1,19 +1,53 @@
-import uuid
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from apps.academica.models import Estudiante
 from apps.accounts.roles import get_user_roles
-from apps.accounts.scope import (
-    get_administrative_faculty_ids,
-    get_program_ids_for_faculties,
-    get_visible_program_ids,
-    get_visible_student_ids,
-    is_superadmin,
+from apps.accounts.scope import is_superadmin
+from apps.estructura.models import PeriodoAcademico, ProgramaAcademico
+from apps.financiera.distributed_write import (
+    anular_recibo,
+    cancel_matricula,
+    create_matricula,
+    create_recibo,
+    create_tarifa,
+    deactivate_tarifa,
+    update_matricula,
+    update_recibo,
+    update_tarifa,
 )
-from apps.financiera.models import Matricula, Recibo, TarifaMatricula
+from apps.financiera.models import MatriculaDetalle, Recibo, TarifaMatricula
+from apps.reportes.models import EstudianteDetalle
+
+TARIFA_STATUS_CHOICES = (
+    ("Activa", "Activa"),
+    ("Inactiva", "Inactiva"),
+)
+
+RECIBO_STATUS_CHOICES = (
+    ("Pendiente", "Pendiente"),
+    ("Pagado", "Pagado"),
+    ("Vencido", "Vencido"),
+    ("Anulado", "Anulado"),
+)
+
+METODO_PAGO_CHOICES = (
+    ("", "---------"),
+    ("Efectivo", "Efectivo"),
+    ("Tarjeta", "Tarjeta"),
+    ("PSE", "PSE"),
+    ("Transferencia", "Transferencia"),
+    ("Consignacion", "Consignacion"),
+)
+
+MATRICULA_STATUS_CHOICES = (
+    ("Pendiente", "Pendiente"),
+    ("Activa", "Activa"),
+    ("Finalizada", "Finalizada"),
+    ("Cancelada", "Cancelada"),
+)
 
 
 def user_can_manage_financial(user):
@@ -21,101 +55,66 @@ def user_can_manage_financial(user):
     return is_superadmin(user) or "administrativo" in roles
 
 
-def get_financial_program_ids(user):
-    if is_superadmin(user):
-        return None
-
-    program_ids = set(get_visible_program_ids(user, include_student=True) or [])
-    program_ids.update(
-        get_program_ids_for_faculties(get_administrative_faculty_ids(user))
+class TarifaMatriculaForm(forms.Form):
+    programa_academico = forms.ModelChoiceField(
+        label="Programa academico",
+        queryset=ProgramaAcademico.objects.none(),
     )
-    return list(program_ids)
-
-
-def get_financial_student_queryset(user):
-    queryset = Estudiante.objects.select_related("usuario", "programa_academico")
-    student_ids = get_visible_student_ids(user)
-    if student_ids is None:
-        return queryset
-    return queryset.filter(id_estudiante__in=student_ids)
-
-
-def get_financial_tarifa_queryset(user):
-    queryset = TarifaMatricula.objects.select_related(
-        "programa_academico",
-        "periodo_academico",
+    periodo_academico = forms.ModelChoiceField(
+        label="Periodo academico",
+        queryset=PeriodoAcademico.objects.none(),
     )
-    program_ids = get_financial_program_ids(user)
-    if program_ids is None:
-        return queryset
-    return queryset.filter(programa_academico_id__in=program_ids)
+    valor_matricula = forms.DecimalField(
+        label="Valor matricula",
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0"),
+    )
+    fecha_limite_ordinaria = forms.DateField(
+        label="Fecha limite ordinaria",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    fecha_limite_extraordinaria = forms.DateField(
+        label="Fecha limite extraordinaria",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    estado = forms.ChoiceField(label="Estado", choices=TARIFA_STATUS_CHOICES)
 
-
-def active_or_finalized_matriculas_count(estudiante):
-    return Matricula.objects.filter(
-        recibo__estudiante=estudiante,
-        estado_matricula__in=[
-            Matricula.EstadoMatricula.ACTIVA,
-            Matricula.EstadoMatricula.FINALIZADA,
-        ],
-    ).count()
-
-
-def validate_matricula_limit(estudiante):
-    used = active_or_finalized_matriculas_count(estudiante)
-    if used >= estudiante.limite_matriculas:
-        raise forms.ValidationError(
-            "El estudiante alcanzo el limite de matriculas permitido.",
-        )
-
-
-class TarifaMatriculaForm(forms.ModelForm):
-    class Meta:
-        model = TarifaMatricula
-        fields = [
-            "programa_academico",
-            "periodo_academico",
-            "valor_matricula",
-            "fecha_limite_ordinaria",
-            "fecha_limite_extraordinaria",
-            "estado",
-        ]
-        labels = {
-            "programa_academico": "Programa academico",
-            "periodo_academico": "Periodo academico",
-            "valor_matricula": "Valor matricula",
-            "fecha_limite_ordinaria": "Fecha limite ordinaria",
-            "fecha_limite_extraordinaria": "Fecha limite extraordinaria",
-        }
-        widgets = {
-            "fecha_limite_ordinaria": forms.DateInput(attrs={"type": "date"}),
-            "fecha_limite_extraordinaria": forms.DateInput(attrs={"type": "date"}),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, tarifa=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-        program_ids = get_financial_program_ids(user)
-        if program_ids is not None:
-            self.fields["programa_academico"].queryset = self.fields[
-                "programa_academico"
-            ].queryset.filter(id_programa_academico__in=program_ids)
+        self.tarifa = tarifa
+        self.fields["programa_academico"].queryset = ProgramaAcademico.objects.order_by(
+            "facultad__nombre_facultad",
+            "nombre_programa",
+        )
+        self.fields["periodo_academico"].queryset = PeriodoAcademico.objects.order_by(
+            "-fecha_inicio",
+            "id_periodo_academico",
+        )
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
+
+        if tarifa is not None:
+            self.fields["programa_academico"].initial = tarifa.programa_academico_id
+            self.fields["periodo_academico"].initial = tarifa.periodo_academico_id
+            self.fields["valor_matricula"].initial = tarifa.valor_matricula
+            self.fields[
+                "fecha_limite_ordinaria"
+            ].initial = tarifa.fecha_limite_ordinaria
+            self.fields[
+                "fecha_limite_extraordinaria"
+            ].initial = tarifa.fecha_limite_extraordinaria
+            self.fields["estado"].initial = tarifa.estado
 
     def clean(self):
         cleaned_data = super().clean()
         program = cleaned_data.get("programa_academico")
         period = cleaned_data.get("periodo_academico")
-        value = cleaned_data.get("valor_matricula")
         ordinary = cleaned_data.get("fecha_limite_ordinaria")
         extraordinary = cleaned_data.get("fecha_limite_extraordinaria")
 
-        if value is not None and value < Decimal("0"):
-            raise forms.ValidationError("El valor de matricula no puede ser negativo.")
-
         if ordinary and extraordinary and extraordinary < ordinary:
-            raise forms.ValidationError(
+            raise ValidationError(
                 "La fecha extraordinaria no puede ser anterior a la ordinaria.",
             )
 
@@ -124,186 +123,250 @@ class TarifaMatriculaForm(forms.ModelForm):
                 programa_academico=program,
                 periodo_academico=period,
             )
-            if self.instance.pk:
-                duplicate = duplicate.exclude(pk=self.instance.pk)
+            if self.tarifa is not None:
+                duplicate = duplicate.exclude(pk=self.tarifa.pk)
             if duplicate.exists():
-                raise forms.ValidationError(
+                raise ValidationError(
                     "Ya existe una tarifa para este programa y periodo.",
                 )
 
         return cleaned_data
 
-    def save(self, commit=True):
-        tarifa = super().save(commit=False)
-        if not tarifa.pk:
-            tarifa.id_tarifa_matricula = uuid.uuid4()
-        if commit:
-            tarifa.save()
-        return tarifa
-
-
-class ReciboForm(forms.ModelForm):
-    class Meta:
-        model = Recibo
-        fields = [
-            "estudiante",
-            "tarifa_matricula",
-            "estado_pago",
-            "fecha_pago",
-            "valor_pagado",
-            "metodo_pago",
-            "extras",
-        ]
-        labels = {
-            "tarifa_matricula": "Tarifa de matricula",
-            "estado_pago": "Estado de pago",
-            "fecha_pago": "Fecha de pago",
-            "valor_pagado": "Valor pagado",
-            "metodo_pago": "Metodo de pago",
+    def save(self):
+        data = self.cleaned_data
+        kwargs = {
+            "id_programa_academico": data["programa_academico"].pk,
+            "id_periodo_academico": data["periodo_academico"].pk,
+            "valor_matricula": data["valor_matricula"],
+            "fecha_limite_ordinaria": data["fecha_limite_ordinaria"],
+            "fecha_limite_extraordinaria": data["fecha_limite_extraordinaria"],
+            "estado": data["estado"],
         }
-        widgets = {
-            "fecha_pago": forms.DateInput(attrs={"type": "date"}),
-        }
+        if self.tarifa is None:
+            return create_tarifa(**kwargs)
+        return update_tarifa(
+            id_tarifa_matricula=self.tarifa.id_tarifa_matricula,
+            **kwargs,
+        )
 
-    def __init__(self, *args, user=None, **kwargs):
+
+class ReciboForm(forms.Form):
+    id_estudiante = forms.ModelChoiceField(
+        label="Estudiante",
+        queryset=EstudianteDetalle.objects.none(),
+    )
+    tarifa_matricula = forms.ModelChoiceField(
+        label="Tarifa de matricula",
+        queryset=TarifaMatricula.objects.none(),
+    )
+    estado_pago = forms.ChoiceField(
+        label="Estado de pago",
+        choices=RECIBO_STATUS_CHOICES,
+    )
+    fecha_pago = forms.DateField(
+        label="Fecha de pago",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    valor_pagado = forms.DecimalField(
+        label="Valor pagado",
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        required=False,
+    )
+    metodo_pago = forms.ChoiceField(
+        label="Metodo de pago",
+        choices=METODO_PAGO_CHOICES,
+        required=False,
+    )
+    extras = forms.DecimalField(
+        label="Extras",
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        initial=Decimal("0"),
+    )
+
+    def __init__(self, *args, recibo=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-        self.fields["estudiante"].queryset = get_financial_student_queryset(user)
-        self.fields["tarifa_matricula"].queryset = get_financial_tarifa_queryset(user)
+        self.recibo = recibo
+        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+            "nombre_facultad",
+            "nombre_programa",
+            "estudiante",
+        )
+        self.fields["tarifa_matricula"].queryset = TarifaMatricula.objects.filter(
+            estado="Activa",
+        ).select_related("programa_academico", "periodo_academico")
+        self.fields["id_estudiante"].label_from_instance = (
+            lambda student: (
+                f"{student.nombre_facultad} - {student.estudiante} "
+                f"({student.nombre_programa})"
+            )
+        )
+        self.fields["tarifa_matricula"].label_from_instance = (
+            lambda tarifa: (
+                f"{tarifa.programa_academico.nombre_programa} - "
+                f"{tarifa.periodo_academico_id} - {tarifa.valor_matricula}"
+            )
+        )
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
+        if recibo is not None:
+            if recibo.tarifa_matricula_id:
+                current_tarifa = TarifaMatricula.objects.filter(
+                    pk=recibo.tarifa_matricula_id,
+                )
+                self.fields["tarifa_matricula"].queryset = (
+                    current_tarifa | self.fields["tarifa_matricula"].queryset
+                )
+            self.fields["id_estudiante"].initial = recibo.id_estudiante
+            self.fields["tarifa_matricula"].initial = recibo.tarifa_matricula_id
+            self.fields["estado_pago"].initial = recibo.estado_pago
+            self.fields["fecha_pago"].initial = recibo.fecha_pago
+            self.fields["valor_pagado"].initial = recibo.valor_pagado
+            self.fields["metodo_pago"].initial = recibo.metodo_pago or ""
+            self.fields["extras"].initial = recibo.extras
+
     def clean(self):
         cleaned_data = super().clean()
-        student = cleaned_data.get("estudiante")
+        student = cleaned_data.get("id_estudiante")
         tarifa = cleaned_data.get("tarifa_matricula")
-        payment_state = cleaned_data.get("estado_pago")
+        state = cleaned_data.get("estado_pago")
         paid_value = cleaned_data.get("valor_pagado")
-        extras = cleaned_data.get("extras")
+        method = cleaned_data.get("metodo_pago") or None
 
-        if self.instance.pk and self.instance.estado_pago == Recibo.EstadoPago.ANULADO:
-            raise forms.ValidationError(
-                "No se puede pagar ni editar un recibo anulado.",
-            )
-
-        if (
-            student
-            and tarifa
-            and student.programa_academico_id != tarifa.programa_academico_id
-        ):
-            raise forms.ValidationError(
-                "La tarifa debe corresponder al programa del estudiante.",
-            )
+        if self.recibo is not None and self.recibo.estado_pago == "Anulado":
+            raise ValidationError("No se puede editar un recibo anulado.")
 
         if student and tarifa:
+            if student.id_facultad != tarifa.id_facultad:
+                raise ValidationError(
+                    "La tarifa debe pertenecer a la facultad del estudiante.",
+                )
+            if student.id_programa_academico != tarifa.programa_academico_id:
+                raise ValidationError(
+                    "La tarifa debe corresponder al programa del estudiante.",
+                )
             duplicate = Recibo.objects.filter(
-                estudiante=student,
+                id_estudiante=student.pk,
                 tarifa_matricula=tarifa,
             )
-            if self.instance.pk:
-                duplicate = duplicate.exclude(pk=self.instance.pk)
+            if self.recibo is not None:
+                duplicate = duplicate.exclude(pk=self.recibo.pk)
             if duplicate.exists():
-                raise forms.ValidationError(
+                raise ValidationError(
                     "Ya existe un recibo para este estudiante y tarifa.",
                 )
+        if state == "Pagado" and paid_value is None:
+            raise ValidationError("Un recibo pagado debe registrar el valor pagado.")
 
-        if paid_value is not None and paid_value < Decimal("0"):
-            raise forms.ValidationError("El valor pagado no puede ser negativo.")
-
-        if extras is not None and extras < Decimal("0"):
-            raise forms.ValidationError("Los extras no pueden ser negativos.")
-
-        if payment_state == Recibo.EstadoPago.PAGADO and paid_value is None:
-            raise forms.ValidationError(
-                "Un recibo pagado debe registrar el valor pagado.",
-            )
-
-        if payment_state != Recibo.EstadoPago.PAGADO:
+        if state != "Pagado":
             cleaned_data["fecha_pago"] = None
             cleaned_data["valor_pagado"] = None
             cleaned_data["metodo_pago"] = None
+        else:
+            cleaned_data["metodo_pago"] = method
+            if not cleaned_data.get("fecha_pago"):
+                cleaned_data["fecha_pago"] = timezone.localdate()
 
         return cleaned_data
 
-    def save(self, commit=True):
-        recibo = super().save(commit=False)
-        if not recibo.pk:
-            recibo.id_recibo = uuid.uuid4()
-        if recibo.estado_pago == Recibo.EstadoPago.PAGADO and not recibo.fecha_pago:
-            recibo.fecha_pago = timezone.localdate()
-        if commit:
-            recibo.save()
-        return recibo
-
-
-class MatriculaCreateForm(forms.ModelForm):
-    class Meta:
-        model = Matricula
-        fields = ["recibo", "estado_matricula"]
-        labels = {
-            "estado_matricula": "Estado de matricula",
+    def save(self):
+        data = self.cleaned_data
+        kwargs = {
+            "id_estudiante": data["id_estudiante"].pk,
+            "id_tarifa_matricula": data["tarifa_matricula"].pk,
+            "fecha_pago": data["fecha_pago"],
+            "valor_pagado": data["valor_pagado"],
+            "metodo_pago": data["metodo_pago"],
+            "estado_pago": data["estado_pago"],
+            "extras": data["extras"],
         }
+        if self.recibo is None:
+            return create_recibo(**kwargs)
+        return update_recibo(id_recibo=self.recibo.id_recibo, **kwargs)
 
-    def __init__(self, *args, user=None, **kwargs):
+
+class MatriculaForm(forms.Form):
+    id_recibo = forms.ModelChoiceField(
+        label="Recibo",
+        queryset=Recibo.objects.none(),
+    )
+    estado_matricula = forms.ChoiceField(
+        label="Estado de matricula",
+        choices=MATRICULA_STATUS_CHOICES,
+    )
+
+    def __init__(self, *args, matricula=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-        self.fields["recibo"].queryset = (
-            Recibo.objects.select_related(
-                "estudiante__usuario",
-                "estudiante__programa_academico",
-                "tarifa_matricula__periodo_academico",
-            )
-            .filter(
-                id_recibo__in=get_financial_recibo_ids(user),
-                estado_pago=Recibo.EstadoPago.PAGADO,
-                matricula__isnull=True,
-            )
-            .distinct()
+        self.matricula = matricula
+        recibos = Recibo.objects.filter(estado_pago="Pagado").select_related(
+            "tarifa_matricula",
+            "tarifa_matricula__programa_academico",
+            "tarifa_matricula__periodo_academico",
         )
-        self.fields["estado_matricula"].choices = [
-            (Matricula.EstadoMatricula.PENDIENTE, "Pendiente"),
-            (Matricula.EstadoMatricula.ACTIVA, "Activa"),
-        ]
+        if matricula is None:
+            used = MatriculaDetalle.objects.values_list("id_recibo", flat=True)
+            recibos = recibos.exclude(id_recibo__in=used)
+        elif matricula.id_recibo:
+            recibos = Recibo.objects.filter(pk=matricula.id_recibo) | recibos
+        self.fields["id_recibo"].queryset = recibos.distinct()
+        self.fields["id_recibo"].label_from_instance = (
+            lambda recibo: (
+                f"{recibo.id_estudiante} - "
+                f"{recibo.tarifa_matricula.programa_academico.nombre_programa} - "
+                f"{recibo.tarifa_matricula.periodo_academico_id}"
+            )
+        )
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
+        if matricula is not None:
+            self.fields["id_recibo"].initial = matricula.id_recibo
+            self.fields["estado_matricula"].initial = matricula.estado_matricula
+
     def clean(self):
         cleaned_data = super().clean()
-        recibo = cleaned_data.get("recibo")
-        state = cleaned_data.get("estado_matricula")
+        recibo = cleaned_data.get("id_recibo")
         if not recibo:
             return cleaned_data
 
-        if recibo.estado_pago != Recibo.EstadoPago.PAGADO:
-            raise forms.ValidationError(
-                "Solo se puede crear matricula desde un recibo pagado.",
-            )
-
-        if Matricula.objects.filter(recibo=recibo).exists():
-            raise forms.ValidationError("Este recibo ya tiene una matricula asociada.")
-
-        if state == Matricula.EstadoMatricula.ACTIVA:
-            validate_matricula_limit(recibo.estudiante)
+        duplicate = MatriculaDetalle.objects.filter(id_recibo=recibo.pk)
+        if self.matricula is not None:
+            duplicate = duplicate.exclude(pk=self.matricula.pk)
+        if duplicate.exists():
+            raise ValidationError("Este recibo ya tiene una matricula asociada.")
 
         return cleaned_data
 
-    def save(self, commit=True):
-        matricula = super().save(commit=False)
-        matricula.id_matricula = uuid.uuid4()
-        if commit:
-            matricula.save()
-        return matricula
+    def save(self):
+        data = self.cleaned_data
+        if self.matricula is None:
+            return create_matricula(
+                id_recibo=data["id_recibo"].pk,
+                estado_matricula=data["estado_matricula"],
+            )
+        return update_matricula(
+            id_matricula=self.matricula.id_matricula,
+            id_facultad=self.matricula.id_facultad,
+            id_recibo=data["id_recibo"].pk,
+            estado_matricula=data["estado_matricula"],
+        )
 
 
-def get_financial_recibo_ids(user):
-    queryset = Recibo.objects.all()
-    if is_superadmin(user):
-        return queryset.values_list("id_recibo", flat=True)
+def deactivate_tarifa_from_instance(tarifa):
+    return deactivate_tarifa(id_tarifa_matricula=tarifa.id_tarifa_matricula)
 
-    student_ids = get_visible_student_ids(user)
-    if not student_ids:
-        return []
-    return queryset.filter(estudiante_id__in=student_ids).values_list(
-        "id_recibo",
-        flat=True,
+
+def anular_recibo_from_instance(recibo):
+    return anular_recibo(id_recibo=recibo.id_recibo)
+
+
+def cancel_matricula_from_instance(matricula):
+    return cancel_matricula(
+        id_matricula=matricula.id_matricula,
+        id_facultad=matricula.id_facultad,
     )

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de tarifa{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:tarifa_list' %}">Volver a tarifas</a></p>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">Tarifa de matricula</h1>
+    {% if can_manage_financial %}
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'financiera:tarifa_update' tarifa.id_tarifa_matricula %}">Editar tarifa</a>
+            {% if tarifa.estado != "Inactiva" %}
+                <a class="btn btn-outline-danger" href="{% url 'financiera:tarifa_deactivate' tarifa.id_tarifa_matricula %}">Desactivar tarifa</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<dl class="row">
+    <dt>ID tarifa</dt>
+    <dd>{{ tarifa.id_tarifa_matricula }}</dd>
+    <dt>Programa</dt>
+    <dd>{{ tarifa.programa_academico.nombre_programa }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ tarifa.programa_academico.facultad.nombre_facultad }} ({{ tarifa.id_facultad }})</dd>
+    <dt>Periodo</dt>
+    <dd>{{ tarifa.periodo_academico.id_periodo_academico }}</dd>
+    <dt>Valor matricula</dt>
+    <dd>{{ tarifa.valor_matricula }}</dd>
+    <dt>Limite ordinaria</dt>
+    <dd>{{ tarifa.fecha_limite_ordinaria }}</dd>
+    <dt>Limite extraordinaria</dt>
+    <dd>{{ tarifa.fecha_limite_extraordinaria }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ tarifa.estado }}</dd>
+</dl>
+{% endblock %}

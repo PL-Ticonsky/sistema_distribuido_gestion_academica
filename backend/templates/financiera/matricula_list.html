@@ -6,8 +6,11 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="mb-1">Matriculas</h1>
-        <p class="mb-0">Estado academico-administrativo asociado a recibos pagados.</p>
+        <p class="mb-0">Lectura global desde reportes.vw_matriculas_detalle.</p>
     </div>
+    {% if can_manage_financial %}
+        <a class="btn btn-primary" href="{% url 'financiera:matricula_create' %}">Crear matricula</a>
+    {% endif %}
 </div>
 
 <form class="row g-2 mb-3" method="get">
@@ -44,6 +47,7 @@
             <th>Estado pago</th>
             <th>Valor pagado</th>
             <th>Fecha pago</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -66,10 +70,21 @@
                 </td>
                 <td>{{ matricula.valor_pagado|default:"-" }}</td>
                 <td>{{ matricula.fecha_pago|default:"-" }}</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">Ver</a>
+                        {% if can_manage_financial %}
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'financiera:matricula_update' matricula.id_matricula %}">Editar</a>
+                            {% if matricula.estado_matricula != "Cancelada" %}
+                                <a class="btn btn-sm btn-outline-danger" href="{% url 'financiera:matricula_cancelar' matricula.id_matricula %}">Cancelar</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="9">No hay matriculas registradas.</td>
+                <td colspan="10">No hay matriculas registradas.</td>
             </tr>
         {% endfor %}
     </tbody>

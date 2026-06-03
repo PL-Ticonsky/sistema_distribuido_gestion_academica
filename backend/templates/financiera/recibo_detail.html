@@ -13,22 +13,19 @@
                 Editar recibo
             </a>
             {% if recibo.estado_pago != "Anulado" %}
-                <form method="post" action="{% url 'financiera:recibo_anular' recibo.id_recibo %}">
-                    {% csrf_token %}
-                    <button class="btn btn-outline-danger" type="submit">Anular recibo</button>
-                </form>
+                <a class="btn btn-outline-danger" href="{% url 'financiera:recibo_anular' recibo.id_recibo %}">Anular recibo</a>
             {% endif %}
         </div>
     {% endif %}
 </div>
 
 <dl class="row">
+    <dt>ID recibo</dt>
+    <dd>{{ recibo.id_recibo }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ recibo.estudiante.usuario.nombre|default:recibo.estudiante_id }}</dd>
-    <dt>Correo</dt>
-    <dd>{{ recibo.estudiante.usuario.correo|default:"-" }}</dd>
-    <dt>Programa del estudiante</dt>
-    <dd>{{ recibo.estudiante.programa_academico.nombre_programa }}</dd>
+    <dd>{{ recibo.id_estudiante }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ recibo.id_facultad }}</dd>
     <dt>Programa tarifado</dt>
     <dd>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</dd>
     <dt>Periodo</dt>
