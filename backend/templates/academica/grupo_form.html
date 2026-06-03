@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title|default:"Grupo" }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:grupo_list' %}">Volver a grupos</a></p>
+
+<div class="mb-3">
+    <h1 class="mb-1">{{ form_title|default:"Grupo" }}</h1>
+    <p class="mb-0">
+        La lectura se confirma desde reportes.vw_grupos_detalle y la escritura se envia al esquema FDW segun la facultad.
+    </p>
+</div>
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+        {% for field in form %}
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-save"></i>
+            {{ submit_label|default:"Guardar grupo" }}
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academica:grupo_list' %}">
+            Cancelar
+        </a>
+    </div>
+</form>
+{% endblock %}

@@ -1,7 +1,6 @@
 from decimal import Decimal
 
-from apps.academica.models import Inscripcion, ProgramaAsignatura
-from apps.homologaciones.models import Homologacion
+from django.db import connection
 
 
 def _round_decimal(value, places=2):
@@ -20,44 +19,75 @@ def _risk_label(score):
 
 
 def calculate_student_indicators(student):
-    total_subjects = ProgramaAsignatura.objects.filter(
-        programa_academico=student.programa_academico,
-        estado="Activa",
-    ).count()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select count(distinct id_programa_asignatura)
+            from reportes.vw_programa_asignatura_global
+            where id_programa_academico = %s
+              and estado = 'Activa'
+            """,
+            [student.id_programa_academico],
+        )
+        total_subjects = cursor.fetchone()[0] or 0
+
+        cursor.execute(
+            """
+            select
+                cod_asignatura,
+                max(nota_final) as grade,
+                max(coalesce(creditos, 0)) as credits
+            from reportes.vw_inscripciones_detalle
+            where id_estudiante = %s
+              and estado_inscripcion = 'Aprobada'
+              and nota_final is not null
+            group by cod_asignatura
+            """,
+            [student.id_estudiante],
+        )
+        approved_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            select
+                pa.cod_asignatura,
+                max(h.nota_obtenida) as grade,
+                max(coalesce(a.creditos, 0)) as credits
+            from reportes.vw_homologaciones_global h
+            join reportes.vw_programa_asignatura_global pa
+              on pa.id_programa_asignatura = h.id_programa_asignatura
+            left join institucional.asignatura a
+              on a.cod_asignatura = pa.cod_asignatura
+            where h.id_estudiante = %s
+              and h.estado_homologacion = 'Aprobada'
+              and h.nota_obtenida is not null
+            group by pa.cod_asignatura
+            """,
+            [student.id_estudiante],
+        )
+        homologation_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            select
+                count(distinct id_grupo) filter (
+                    where estado_inscripcion = 'Reprobada'
+                ) as failed_subjects,
+                coalesce(bool_or(intento >= 3), false) as has_high_attempt
+            from reportes.vw_inscripciones_detalle
+            where id_estudiante = %s
+            """,
+            [student.id_estudiante],
+        )
+        failed_subjects, has_high_attempt = cursor.fetchone()
 
     approved_subjects = {}
-    approved_enrollments = Inscripcion.objects.select_related(
-        "grupo__programa_asignatura__asignatura",
-    ).filter(
-        estudiante=student,
-        estado_inscripcion="Aprobada",
-        nota_final__isnull=False,
-    )
-    for enrollment in approved_enrollments:
-        subject = enrollment.grupo.programa_asignatura.asignatura
-        current_grade = approved_subjects.get(subject.cod_asignatura, {}).get("grade")
-        if current_grade is None or enrollment.nota_final > current_grade:
-            approved_subjects[subject.cod_asignatura] = {
-                "grade": enrollment.nota_final,
-                "credits": subject.creditos,
-                "source": "inscripcion",
-            }
-
-    approved_homologations = Homologacion.objects.select_related(
-        "programa_asignatura__asignatura",
-    ).filter(
-        estudiante=student,
-        estado_homologacion="Aprobada",
-        nota_obtenida__isnull=False,
-    )
-    for homologation in approved_homologations:
-        subject = homologation.programa_asignatura.asignatura
-        current_grade = approved_subjects.get(subject.cod_asignatura, {}).get("grade")
-        if current_grade is None or homologation.nota_obtenida > current_grade:
-            approved_subjects[subject.cod_asignatura] = {
-                "grade": homologation.nota_obtenida,
-                "credits": subject.creditos,
-                "source": "homologacion",
+    for subject_code, grade, credits in [*approved_rows, *homologation_rows]:
+        current_grade = approved_subjects.get(subject_code, {}).get("grade")
+        if current_grade is None or grade > current_grade:
+            approved_subjects[subject_code] = {
+                "grade": grade,
+                "credits": credits,
             }
 
     approved_count = len(approved_subjects)
@@ -75,20 +105,6 @@ def calculate_student_indicators(student):
     if weighted_credits:
         weighted_average = weighted_points / Decimal(weighted_credits)
         performance_percentage = weighted_average / Decimal("5.0") * 100
-
-    failed_subjects = (
-        Inscripcion.objects.filter(
-            estudiante=student,
-            estado_inscripcion="Reprobada",
-        )
-        .values("grupo__programa_asignatura__asignatura_id")
-        .distinct()
-        .count()
-    )
-    has_high_attempt = Inscripcion.objects.filter(
-        estudiante=student,
-        intento__gte=3,
-    ).exists()
 
     risk_score = 0
     if weighted_average is not None and weighted_average < Decimal("3.2"):

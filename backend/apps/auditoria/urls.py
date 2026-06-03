@@ -6,6 +6,7 @@ app_name = "auditoria"
 
 urlpatterns = [
     path("", AuditoriaListView.as_view(), name="auditoria_list"),
+    path("registros/", AuditoriaListView.as_view(), name="auditoria_registros"),
     path(
         "<uuid:id_auditoria>/",
         AuditoriaDetailView.as_view(),

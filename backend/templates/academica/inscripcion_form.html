@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Crear inscripcion{% endblock %}
+{% block title %}{{ form_title|default:"Inscripcion" }}{% endblock %}
 
 {% block content %}
 <p><a href="{% url 'academica:inscripcion_list' %}">Volver a inscripciones</a></p>
 
-<h1>Crear inscripcion</h1>
+<div class="mb-3">
+    <h1 class="mb-1">{{ form_title|default:"Inscripcion" }}</h1>
+    <p class="mb-0">
+        La lectura se confirma desde reportes.vw_inscripciones_detalle y la escritura se envia al esquema FDW derivado del grupo.
+    </p>
+</div>
 
 {% if form.non_field_errors %}
     <div class="alert alert-danger" role="alert">
@@ -15,23 +20,26 @@
 
 <form method="post">
     {% csrf_token %}
-
-    {% if not form.estudiante.is_hidden %}
-        <div class="mb-3">
-            {{ form.estudiante.label_tag }}
-            {{ form.estudiante }}
-            {{ form.estudiante.errors }}
-        </div>
-    {% else %}
-        {{ form.estudiante }}
-    {% endif %}
-
-    <div class="mb-3">
-        {{ form.grupo.label_tag }}
-        {{ form.grupo }}
-        {{ form.grupo.errors }}
+    <div class="row g-3">
+        {% for field in form %}
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
     </div>
-
-    <button type="submit">Guardar inscripcion</button>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-save"></i>
+            {{ submit_label|default:"Guardar inscripcion" }}
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academica:inscripcion_list' %}">
+            Cancelar
+        </a>
+    </div>
 </form>
 {% endblock %}

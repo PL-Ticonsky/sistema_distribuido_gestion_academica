@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de estudiante{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:estudiante_list' %}">Volver a estudiantes</a></p>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">{{ estudiante.estudiante|default:estudiante.id_estudiante }}</h1>
+        <p class="text-muted mb-0">{{ estudiante.correo|default:"Sin correo" }}</p>
+    </div>
+    {% if can_create_students %}
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'academica:estudiante_update' estudiante.id_estudiante %}">
+                Editar
+            </a>
+            <a class="btn btn-outline-danger" href="{% url 'academica:estudiante_deactivate' estudiante.id_estudiante %}">
+                Desactivar
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<dl class="row">
+    <dt class="col-sm-3">Nodo origen</dt>
+    <dd class="col-sm-9">{{ estudiante.nodo_origen|default:"-" }}</dd>
+    <dt class="col-sm-3">Facultad</dt>
+    <dd class="col-sm-9">{{ estudiante.nombre_facultad|default:estudiante.id_facultad }}</dd>
+    <dt class="col-sm-3">Programa</dt>
+    <dd class="col-sm-9">{{ estudiante.nombre_programa|default:estudiante.id_programa_academico }}</dd>
+    <dt class="col-sm-3">Estado</dt>
+    <dd class="col-sm-9">{{ estudiante.estado_estudiante|default:"-" }}</dd>
+    <dt class="col-sm-3">Limite matriculas</dt>
+    <dd class="col-sm-9">{{ estudiante.limite_matriculas|default:"-" }}</dd>
+    <dt class="col-sm-3">ID estudiante</dt>
+    <dd class="col-sm-9">{{ estudiante.id_estudiante }}</dd>
+</dl>
+{% endblock %}

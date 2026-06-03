@@ -66,6 +66,10 @@
                             <i class="bi bi-calendar3"></i>
                             <span>Periodos</span>
                         </a>
+                        <a class="condor-nav-link" href="{% url 'estructura:asignatura_list' %}">
+                            <i class="bi bi-journal-text"></i>
+                            <span>Asignaturas</span>
+                        </a>
                     {% endif %}
 
                     {% if condor_show_student or condor_show_teacher %}
@@ -84,9 +88,9 @@
                                 <span>Inscripciones</span>
                             </a>
                             {% if "coordinador" in condor_roles or condor_is_superadmin %}
-                                <a class="condor-nav-link" href="{% url 'academica:estudiante_create' %}">
-                                    <i class="bi bi-person-plus"></i>
-                                    <span>Agregar estudiante</span>
+                                <a class="condor-nav-link" href="{% url 'academica:estudiante_list' %}">
+                                    <i class="bi bi-mortarboard"></i>
+                                    <span>Estudiantes</span>
                                 </a>
                             {% endif %}
                             {% if "estudiante" in condor_roles %}
@@ -104,10 +108,6 @@
                             <a class="condor-nav-link" href="{% url 'academica:grupo_list' %}">
                                 <i class="bi bi-people"></i>
                                 <span>Grupos</span>
-                            </a>
-                            <a class="condor-nav-link" href="{% url 'academica:nota_grupo_list' %}">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Notas</span>
                             </a>
                             {% if condor_show_indicators %}
                                 <a class="condor-nav-link {% if request.resolver_match.app_name == 'indicadores' %}active{% endif %}" href="{% url 'indicadores:indicador_list' %}">
@@ -148,6 +148,14 @@
                                 <span>Auditoria</span>
                             </a>
                         {% endif %}
+                    {% endif %}
+
+                    {% if condor_show_reports %}
+                        <span class="condor-nav-title">Reportes</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'reportes' %}active{% endif %}" href="{% url 'reportes:index' %}">
+                            <i class="bi bi-table"></i>
+                            <span>Reportes</span>
+                        </a>
                     {% endif %}
                 </nav>
             </aside>

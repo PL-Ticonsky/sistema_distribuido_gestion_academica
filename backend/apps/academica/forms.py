@@ -1,34 +1,53 @@
-import uuid
 
 from django import forms
-from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import connection
 from django.db.models import Count, Max
 
-from apps.academica.models import Estudiante, Grupo, Inscripcion
-from apps.accounts.models import CustomUser
+from apps.academica.distributed_write import (
+    create_estudiante,
+    create_grupo,
+    create_inscripcion,
+    update_estudiante,
+    update_grupo,
+    update_inscripcion,
+)
+from apps.academica.models import Inscripcion
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import (
     get_coordinated_program_ids,
-    get_student_for_user,
-    get_visible_group_ids,
-    get_visible_student_ids,
     is_superadmin,
 )
-from apps.estructura.models import ProgramaAcademico
+from apps.estructura.models import Facultad, PeriodoAcademico, ProgramaAcademico
 from apps.financiera.models import Matricula
+from apps.reportes.models import (
+    EstudianteDetalle,
+    GrupoDetalle,
+    InscripcionDetalle,
+    UsuarioGlobal,
+)
 
 ACTIVE_GROUP_STATES = ("Abierto", "En curso")
 ACTIVE_ENROLLMENT_STATES = ("Cursando", "Aprobada", "Reprobada")
 WRITE_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
-DEMO_STUDENT_PASSWORD = "Demo12345*"
 STUDENT_STATUS_CHOICES = (
     ("Activo", "Activo"),
     ("Inactivo", "Inactivo"),
     ("Suspendido", "Suspendido"),
     ("Retirado", "Retirado"),
     ("Egresado", "Egresado"),
+)
+GROUP_STATUS_CHOICES = (
+    ("Abierto", "Abierto"),
+    ("En curso", "En curso"),
+    ("Finalizado", "Finalizado"),
+    ("Cancelado", "Cancelado"),
+)
+ENROLLMENT_STATUS_CHOICES = (
+    ("Cursando", "Cursando"),
+    ("Aprobada", "Aprobada"),
+    ("Reprobada", "Reprobada"),
+    ("Cancelada", "Cancelada"),
 )
 
 
@@ -42,18 +61,31 @@ def user_can_create_students(user):
     return is_superadmin(user) or "coordinador" in roles
 
 
+def user_can_create_groups(user):
+    roles = set(get_user_roles(user))
+    return is_superadmin(user) or "coordinador" in roles
+
+
+def _choice_rows(sql, params=None):
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params or [])
+        return cursor.fetchall()
+
+
 class EstudianteCreateForm(forms.Form):
-    nombre = forms.CharField(label="Nombre completo", max_length=80)
-    correo = forms.EmailField(label="Correo institucional", max_length=254)
-    tipo_de_documento = forms.ChoiceField(
-        label="Tipo de documento",
-        choices=CustomUser.TipoDocumento.choices,
+    id_usuario = forms.ModelChoiceField(
+        label="Usuario",
+        queryset=UsuarioGlobal.objects.none(),
     )
-    numero_de_documento = forms.CharField(label="Numero de documento", max_length=20)
-    direccion = forms.CharField(label="Direccion", max_length=120, required=False)
-    programa_academico = forms.ModelChoiceField(
+    id_facultad = forms.ModelChoiceField(
+        label="Facultad",
+        queryset=Facultad.objects.none(),
+        to_field_name="id_facultad",
+    )
+    id_programa_academico = forms.ModelChoiceField(
         label="Programa academico",
         queryset=ProgramaAcademico.objects.none(),
+        to_field_name="id_programa_academico",
     )
     limite_matriculas = forms.IntegerField(
         label="Limite de matriculas",
@@ -66,182 +98,457 @@ class EstudianteCreateForm(forms.Form):
         initial="Activo",
     )
 
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, estudiante=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.estudiante = estudiante
+
+        faculty_queryset = Facultad.objects.all()
         program_queryset = ProgramaAcademico.objects.select_related("facultad").filter(
             estado="Activo",
         )
         if not is_superadmin(user):
+            coordinated_program_ids = get_coordinated_program_ids(user)
             program_queryset = program_queryset.filter(
-                id_programa_academico__in=get_coordinated_program_ids(user),
+                id_programa_academico__in=coordinated_program_ids,
             )
-        self.fields["programa_academico"].queryset = program_queryset.order_by(
+            faculty_queryset = faculty_queryset.filter(
+                programas__id_programa_academico__in=coordinated_program_ids,
+            )
+
+        self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
+            "nombre_facultad",
+        )
+        self.fields["id_programa_academico"].queryset = program_queryset.order_by(
             "nombre_programa",
+        )
+        self.fields["id_usuario"].queryset = UsuarioGlobal.objects.filter(
+            is_active=True,
+        ).order_by("nombre", "correo")
+        self.fields["id_usuario"].label_from_instance = (
+            lambda user: f"{user.nombre} <{user.correo}>"
         )
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
-    def clean_correo(self):
-        correo = CustomUser.objects.normalize_email(self.cleaned_data["correo"])
-        if CustomUser.objects.filter(correo__iexact=correo).exists():
-            raise ValidationError("Ya existe un usuario registrado con este correo.")
-        return correo
+        if estudiante is not None:
+            self.fields["id_facultad"].disabled = True
+            self.fields["id_usuario"].disabled = True
+            self.fields["id_usuario"].initial = estudiante.id_usuario
+            self.fields["id_facultad"].initial = estudiante.id_facultad
+            self.fields["id_programa_academico"].initial = (
+                estudiante.id_programa_academico
+            )
+            self.fields["limite_matriculas"].initial = estudiante.limite_matriculas
+            self.fields["estado_estudiante"].initial = estudiante.estado_estudiante
 
     def clean(self):
         cleaned_data = super().clean()
-        tipo_de_documento = cleaned_data.get("tipo_de_documento")
-        numero_de_documento = cleaned_data.get("numero_de_documento")
-        program = cleaned_data.get("programa_academico")
+        id_usuario = cleaned_data.get("id_usuario")
+        faculty = cleaned_data.get("id_facultad")
+        program = cleaned_data.get("id_programa_academico")
+        limite_matriculas = cleaned_data.get("limite_matriculas")
 
         if not user_can_create_students(self.user):
-            raise ValidationError("No tienes permisos para agregar estudiantes.")
+            raise ValidationError("No tienes permisos para gestionar estudiantes.")
 
-        if tipo_de_documento and numero_de_documento:
-            if CustomUser.objects.filter(
-                tipo_de_documento=tipo_de_documento,
-                numero_de_documento=numero_de_documento,
-            ).exists():
-                raise ValidationError(
-                    "Ya existe un usuario con este tipo y numero de documento.",
-                )
+        if not faculty:
+            raise ValidationError("La facultad es obligatoria.")
 
-        if program and program not in self.fields["programa_academico"].queryset:
+        if limite_matriculas is not None and limite_matriculas <= 0:
+            raise ValidationError("El limite de matriculas debe ser mayor que cero.")
+
+        if program and program not in self.fields["id_programa_academico"].queryset:
             raise ValidationError("El programa seleccionado esta fuera de tu alcance.")
+
+        if program and faculty and program.facultad_id != faculty.id_facultad:
+            raise ValidationError(
+                "El programa seleccionado no pertenece a la facultad.",
+            )
+
+        if id_usuario:
+            existing_students = EstudianteDetalle.objects.filter(
+                id_usuario=id_usuario.pk,
+            )
+            if self.estudiante is not None:
+                existing_students = existing_students.exclude(
+                    id_estudiante=self.estudiante.id_estudiante,
+                )
+            if existing_students.exists():
+                raise ValidationError("El usuario seleccionado ya tiene estudiante.")
 
         return cleaned_data
 
-    @transaction.atomic
     def save(self):
-        user = CustomUser.objects.create_user(
-            correo=self.cleaned_data["correo"],
-            password=DEMO_STUDENT_PASSWORD,
-            nombre=self.cleaned_data["nombre"],
-            tipo_de_documento=self.cleaned_data["tipo_de_documento"],
-            numero_de_documento=self.cleaned_data["numero_de_documento"],
-            direccion=self.cleaned_data.get("direccion") or None,
-            is_active=True,
-        )
-        student_group, _ = Group.objects.get_or_create(name="estudiante")
-        user.groups.add(student_group)
-
-        return Estudiante.objects.create(
-            id_estudiante=uuid.uuid4(),
-            usuario=user,
-            programa_academico=self.cleaned_data["programa_academico"],
+        return create_estudiante(
+            id_usuario=self.cleaned_data["id_usuario"].pk,
+            id_facultad=self.cleaned_data["id_facultad"].pk,
+            id_programa_academico=self.cleaned_data["id_programa_academico"].pk,
             limite_matriculas=self.cleaned_data["limite_matriculas"],
             estado_estudiante=self.cleaned_data["estado_estudiante"],
         )
 
 
-class InscripcionCreateForm(forms.Form):
-    estudiante = forms.ModelChoiceField(
-        queryset=Estudiante.objects.none(),
-        required=False,
-        label="Estudiante",
+class EstudianteUpdateForm(EstudianteCreateForm):
+    def save(self):
+        return update_estudiante(
+            id_estudiante=self.estudiante.id_estudiante,
+            id_usuario=self.cleaned_data["id_usuario"].pk,
+            id_facultad=self.cleaned_data["id_facultad"].pk,
+            id_programa_academico=self.cleaned_data["id_programa_academico"].pk,
+            limite_matriculas=self.cleaned_data["limite_matriculas"],
+            estado_estudiante=self.cleaned_data["estado_estudiante"],
+        )
+
+
+class GrupoCreateForm(forms.Form):
+    id_facultad = forms.ModelChoiceField(
+        label="Facultad",
+        queryset=Facultad.objects.none(),
+        to_field_name="id_facultad",
     )
-    grupo = forms.ModelChoiceField(
-        queryset=Grupo.objects.none(),
-        label="Grupo",
+    id_programa_asignatura = forms.ChoiceField(label="Asignatura del programa")
+    id_periodo_academico = forms.ModelChoiceField(
+        label="Periodo academico",
+        queryset=PeriodoAcademico.objects.none(),
+        to_field_name="id_periodo_academico",
+    )
+    id_profesor = forms.ChoiceField(label="Docente", required=False)
+    codigo_grupo = forms.CharField(label="Codigo de grupo", max_length=20)
+    cupo_maximo = forms.IntegerField(label="Cupo maximo", min_value=1, initial=30)
+    estado_grupo = forms.ChoiceField(
+        label="Estado",
+        choices=GROUP_STATUS_CHOICES,
+        initial="Abierto",
     )
 
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, grupo=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        self.roles = set(get_user_roles(user))
-        self.student = get_student_for_user(user)
+        self.grupo = grupo
 
-        if is_superadmin(user):
-            student_queryset = Estudiante.objects.select_related(
-                "usuario",
-                "programa_academico",
-            )
-            group_queryset = Grupo.objects.select_related(
-                "programa_asignatura__asignatura",
-                "programa_asignatura__programa_academico",
-                "periodo_academico",
-            )
-        else:
-            student_ids = get_visible_student_ids(user)
-            group_ids = get_visible_group_ids(user)
-            student_queryset = Estudiante.objects.select_related(
-                "usuario",
-                "programa_academico",
-            ).filter(id_estudiante__in=student_ids)
-            group_queryset = Grupo.objects.select_related(
-                "programa_asignatura__asignatura",
-                "programa_asignatura__programa_academico",
-                "periodo_academico",
-            ).filter(id_grupo__in=group_ids)
-
-        if self._is_student_only():
-            self.fields["estudiante"].required = False
-            self.fields["estudiante"].widget = forms.HiddenInput()
-            if self.student:
-                self.fields["estudiante"].queryset = Estudiante.objects.filter(
-                    pk=self.student.pk,
-                )
-                group_queryset = Grupo.objects.select_related(
-                    "programa_asignatura__asignatura",
-                    "programa_asignatura__programa_academico",
-                    "periodo_academico",
-                ).filter(
-                    programa_asignatura__programa_academico=self.student.programa_academico,
-                )
-            else:
-                self.fields["estudiante"].queryset = Estudiante.objects.none()
-                group_queryset = Grupo.objects.none()
-        else:
-            self.fields["estudiante"].required = True
-            self.fields["estudiante"].queryset = student_queryset.order_by(
-                "usuario__nombre",
+        faculty_queryset = Facultad.objects.all()
+        program_ids = None
+        if not is_superadmin(user):
+            program_ids = get_coordinated_program_ids(user)
+            faculty_queryset = faculty_queryset.filter(
+                programas__id_programa_academico__in=program_ids,
             )
 
-        self.fields["grupo"].queryset = group_queryset.filter(
-            estado_grupo__in=ACTIVE_GROUP_STATES,
-        ).order_by(
-            "periodo_academico__id_periodo_academico",
-            "programa_asignatura__asignatura__nombre_asignatura",
-            "codigo_grupo",
+        self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
+            "nombre_facultad",
         )
-
-    def _is_student_only(self):
-        elevated_roles = {"coordinador", "decano", "superadmin"}
-        return "estudiante" in self.roles and not self.roles.intersection(
-            elevated_roles
+        self.fields["id_periodo_academico"].queryset = (
+            PeriodoAcademico.objects.order_by(
+                "-fecha_inicio",
+                "id_periodo_academico",
+            )
         )
+        self.fields["id_programa_asignatura"].choices = (
+            self._programa_asignatura_choices(program_ids)
+        )
+        self.fields["id_profesor"].choices = self._profesor_choices()
+
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+        if grupo is not None:
+            self.fields["id_facultad"].disabled = True
+            self.fields["id_facultad"].initial = grupo.id_facultad
+            self.fields["id_programa_asignatura"].initial = str(
+                grupo.id_programa_asignatura,
+            )
+            self.fields["id_periodo_academico"].initial = grupo.id_periodo_academico
+            self.fields["id_profesor"].initial = str(grupo.id_profesor or "")
+            self.fields["codigo_grupo"].initial = grupo.codigo_grupo
+            self.fields["cupo_maximo"].initial = grupo.cupo_maximo
+            self.fields["estado_grupo"].initial = grupo.estado_grupo
+
+    def _programa_asignatura_choices(self, program_ids):
+        where = ["pa.estado = 'Activa'"]
+        params = []
+        if program_ids is not None:
+            if not program_ids:
+                return [("", "Seleccione una asignatura")]
+            where.append("pa.id_programa_academico = any(%s)")
+            params.append(program_ids)
+        rows = _choice_rows(
+            f"""
+            select
+                pa.id_programa_asignatura::text,
+                pa.id_facultad,
+                pa.id_programa_academico,
+                coalesce(a.nombre_asignatura, pa.cod_asignatura) as asignatura
+            from reportes.vw_programa_asignatura_global pa
+            left join institucional.asignatura a
+              on a.cod_asignatura = pa.cod_asignatura
+            where {" and ".join(where)}
+            order by pa.id_facultad, pa.id_programa_academico, asignatura
+            """,
+            params,
+        )
+        return [
+            ("", "Seleccione una asignatura"),
+            *[
+                (
+                    row[0],
+                    f"{row[1]} - {row[2]} - {row[3]}",
+                )
+                for row in rows
+            ],
+        ]
+
+    def _profesor_choices(self):
+        rows = _choice_rows(
+            """
+            select id_profesor::text, id_facultad, coalesce(profesor, id_profesor::text)
+            from reportes.vw_profesores_detalle
+            order by id_facultad, profesor
+            """,
+        )
+        return [
+            ("", "Sin asignar"),
+            *[(row[0], f"{row[1]} - {row[2]}") for row in rows],
+        ]
 
     def clean(self):
         cleaned_data = super().clean()
+        faculty = cleaned_data.get("id_facultad")
+        id_programa_asignatura = cleaned_data.get("id_programa_asignatura")
+        id_profesor = cleaned_data.get("id_profesor")
+        codigo_grupo = cleaned_data.get("codigo_grupo")
+        cupo_maximo = cleaned_data.get("cupo_maximo")
 
-        if not user_can_write_enrollments(self.user):
-            raise ValidationError("No tienes permisos para crear inscripciones.")
+        if not user_can_create_groups(self.user):
+            raise ValidationError("No tienes permisos para gestionar grupos.")
 
-        estudiante = cleaned_data.get("estudiante")
-        grupo = cleaned_data.get("grupo")
+        if not faculty:
+            raise ValidationError("La facultad es obligatoria.")
 
-        if self._is_student_only():
-            estudiante = self.student
-            cleaned_data["estudiante"] = estudiante
-            if not estudiante:
+        if not codigo_grupo:
+            raise ValidationError("El codigo de grupo es obligatorio.")
+
+        if cupo_maximo is not None and cupo_maximo <= 0:
+            raise ValidationError("El cupo maximo debe ser mayor que cero.")
+
+        if faculty and id_programa_asignatura:
+            rows = _choice_rows(
+                """
+                select id_facultad
+                from reportes.vw_programa_asignatura_global
+                where id_programa_asignatura = %s
+                """,
+                [id_programa_asignatura],
+            )
+            if not rows:
+                raise ValidationError("La asignatura del programa no existe.")
+            if rows[0][0] != faculty.id_facultad:
                 raise ValidationError(
-                    "Tu usuario no tiene un registro de estudiante asociado.",
+                    "La asignatura del programa no pertenece a la facultad.",
                 )
 
-        if not estudiante or not grupo:
-            return cleaned_data
+        if faculty and id_profesor:
+            rows = _choice_rows(
+                """
+                select id_facultad
+                from reportes.vw_profesores_detalle
+                where id_profesor = %s
+                """,
+                [id_profesor],
+            )
+            if not rows:
+                raise ValidationError("El docente seleccionado no existe.")
+            if rows[0][0] != faculty.id_facultad:
+                raise ValidationError("El docente no pertenece a la facultad.")
 
-        validate_enrollment_business_rules(estudiante, grupo)
-        cleaned_data["intento"] = calculate_attempt(estudiante, grupo)
         return cleaned_data
 
     def save(self):
-        return Inscripcion.objects.create(
-            id_inscripcion=uuid.uuid4(),
-            estudiante=self.cleaned_data["estudiante"],
-            grupo=self.cleaned_data["grupo"],
+        return create_grupo(
+            id_facultad=self.cleaned_data["id_facultad"].pk,
+            id_programa_asignatura=self.cleaned_data["id_programa_asignatura"],
+            id_periodo_academico=self.cleaned_data["id_periodo_academico"].pk,
+            id_profesor=self.cleaned_data.get("id_profesor") or None,
+            codigo_grupo=self.cleaned_data["codigo_grupo"],
+            cupo_maximo=self.cleaned_data["cupo_maximo"],
+            estado_grupo=self.cleaned_data["estado_grupo"],
+        )
+
+
+class GrupoUpdateForm(GrupoCreateForm):
+    def save(self):
+        return update_grupo(
+            id_grupo=self.grupo.id_grupo,
+            id_facultad=self.cleaned_data["id_facultad"].pk,
+            id_programa_asignatura=self.cleaned_data["id_programa_asignatura"],
+            id_periodo_academico=self.cleaned_data["id_periodo_academico"].pk,
+            id_profesor=self.cleaned_data.get("id_profesor") or None,
+            codigo_grupo=self.cleaned_data["codigo_grupo"],
+            cupo_maximo=self.cleaned_data["cupo_maximo"],
+            estado_grupo=self.cleaned_data["estado_grupo"],
+        )
+
+
+class InscripcionCreateForm(forms.Form):
+    id_estudiante = forms.ModelChoiceField(
+        label="Estudiante",
+        queryset=EstudianteDetalle.objects.none(),
+    )
+    id_grupo = forms.ModelChoiceField(
+        label="Grupo",
+        queryset=GrupoDetalle.objects.none(),
+    )
+    intento = forms.IntegerField(label="Intento", min_value=1, initial=1)
+    estado_inscripcion = forms.ChoiceField(
+        label="Estado",
+        choices=ENROLLMENT_STATUS_CHOICES,
+        initial="Cursando",
+    )
+    nota1 = forms.DecimalField(
+        label="Nota 1",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota2 = forms.DecimalField(
+        label="Nota 2",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota3 = forms.DecimalField(
+        label="Nota 3",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota_final = forms.DecimalField(
+        label="Nota final",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+
+    def __init__(self, *args, user, inscripcion=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.inscripcion = inscripcion
+
+        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+            "nombre_facultad",
+            "nombre_programa",
+            "estudiante",
+        )
+        self.fields["id_grupo"].queryset = GrupoDetalle.objects.exclude(
+            estado_grupo="Cancelado",
+        ).order_by(
+            "nombre_facultad",
+            "id_periodo_academico",
+            "nombre_asignatura",
+            "codigo_grupo",
+        )
+        self.fields["id_estudiante"].label_from_instance = (
+            lambda student: (
+                f"{student.nombre_facultad} - {student.estudiante} "
+                f"({student.nombre_programa})"
+            )
+        )
+        self.fields["id_grupo"].label_from_instance = (
+            lambda group: (
+                f"{group.nombre_facultad} - {group.id_periodo_academico} - "
+                f"{group.nombre_asignatura} - {group.codigo_grupo}"
+            )
+        )
+
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+        if inscripcion is not None:
+            self.fields["id_estudiante"].disabled = True
+            self.fields["id_grupo"].disabled = True
+            self.fields["id_estudiante"].initial = inscripcion.id_estudiante
+            self.fields["id_grupo"].initial = inscripcion.id_grupo
+            self.fields["intento"].initial = inscripcion.intento
+            self.fields["estado_inscripcion"].initial = inscripcion.estado_inscripcion
+            self.fields["nota1"].initial = getattr(inscripcion, "nota1", None)
+            self.fields["nota2"].initial = getattr(inscripcion, "nota2", None)
+            self.fields["nota3"].initial = getattr(inscripcion, "nota3", None)
+            self.fields["nota_final"].initial = inscripcion.nota_final
+
+    def clean(self):
+        cleaned_data = super().clean()
+        student = cleaned_data.get("id_estudiante")
+        group = cleaned_data.get("id_grupo")
+        estado = cleaned_data.get("estado_inscripcion")
+        nota_final = cleaned_data.get("nota_final")
+        intento = cleaned_data.get("intento")
+
+        if not user_can_write_enrollments(self.user):
+            raise ValidationError("No tienes permisos para gestionar inscripciones.")
+
+        if intento is not None and intento <= 0:
+            raise ValidationError("El intento debe ser mayor que cero.")
+
+        if estado in {"Aprobada", "Reprobada"} and nota_final is None:
+            raise ValidationError(
+                "La nota final es obligatoria para aprobar o reprobar.",
+            )
+
+        if not student or not group:
+            return cleaned_data
+
+        if student.id_facultad != group.id_facultad:
+            raise ValidationError(
+                "El estudiante y el grupo deben estar en la facultad.",
+            )
+
+        duplicate = InscripcionDetalle.objects.filter(
+            id_estudiante=student.id_estudiante,
+            id_grupo=group.id_grupo,
+        )
+        if self.inscripcion is not None:
+            duplicate = duplicate.exclude(
+                id_inscripcion=self.inscripcion.id_inscripcion,
+            )
+        if duplicate.exists():
+            raise ValidationError("El estudiante ya esta inscrito en este grupo.")
+
+        return cleaned_data
+
+    def save(self):
+        return create_inscripcion(
+            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            id_grupo=self.cleaned_data["id_grupo"].pk,
+            nota1=self.cleaned_data.get("nota1"),
+            nota2=self.cleaned_data.get("nota2"),
+            nota3=self.cleaned_data.get("nota3"),
+            nota_final=self.cleaned_data.get("nota_final"),
             intento=self.cleaned_data["intento"],
-            estado_inscripcion="Cursando",
+            estado_inscripcion=self.cleaned_data["estado_inscripcion"],
+        )
+
+
+class InscripcionUpdateForm(InscripcionCreateForm):
+    def save(self):
+        return update_inscripcion(
+            id_inscripcion=self.inscripcion.id_inscripcion,
+            id_facultad=self.inscripcion.id_facultad,
+            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            id_grupo=self.cleaned_data["id_grupo"].pk,
+            nota1=self.cleaned_data.get("nota1"),
+            nota2=self.cleaned_data.get("nota2"),
+            nota3=self.cleaned_data.get("nota3"),
+            nota_final=self.cleaned_data.get("nota_final"),
+            intento=self.cleaned_data["intento"],
+            estado_inscripcion=self.cleaned_data["estado_inscripcion"],
         )
 
 

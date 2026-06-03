@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Cancelar homologacion{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">Volver al detalle</a></p>
+
+<h1>Cancelar homologacion</h1>
+
+<div class="alert alert-warning">
+    Esta accion no elimina fisicamente el registro. Solo cambia el estado de la homologacion a Cancelada en el nodo FDW correspondiente.
+</div>
+
+<dl>
+    <dt>Asignatura origen</dt>
+    <dd>{{ homologacion.asignatura_origen|default:"-" }}</dd>
+    <dt>Institucion origen</dt>
+    <dd>{{ homologacion.institucion_origen|default:"-" }}</dd>
+    <dt>Estado actual</dt>
+    <dd>{{ homologacion.estado_homologacion|default:"-" }}</dd>
+</dl>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-danger" type="submit">
+            Cancelar homologacion
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+            Volver
+        </a>
+    </div>
+</form>
+{% endblock %}

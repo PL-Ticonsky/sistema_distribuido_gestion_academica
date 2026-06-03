@@ -6,26 +6,41 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="mb-1">Homologaciones</h1>
-        <p class="mb-0">Solicitudes, evaluadores y decisiones academicas por alcance.</p>
+        <p class="mb-0">Lectura consolidada desde reportes.vw_homologaciones_global.</p>
     </div>
-    {% if can_create_homologacion %}
+    {% if can_write_homologaciones %}
         <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_create' %}">
             <i class="bi bi-plus-circle"></i>
-            Solicitar homologacion
+            Crear homologacion
         </a>
     {% endif %}
 </div>
+
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="id_facultad" value="{{ active_filters.id_facultad }}" placeholder="Facultad">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="estado_homologacion" value="{{ active_filters.estado_homologacion }}" placeholder="Estado">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="date" name="fecha_solicitud" value="{{ active_filters.fecha_solicitud }}">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
 
 <div class="table-responsive">
 <table class="table table-hover align-middle">
     <thead>
         <tr>
-            <th>Estudiante</th>
-            <th>Programa</th>
+            <th>Nodo</th>
             <th>Asignatura origen</th>
             <th>Institucion origen</th>
-            <th>Asignatura homologada</th>
-            <th>Profesor evaluador</th>
+            <th>Facultad</th>
+            <th>Estudiante</th>
+            <th>Evaluador</th>
             <th>Fecha solicitud</th>
             <th>Estado</th>
             <th>Nota</th>
@@ -35,18 +50,16 @@
     <tbody>
         {% for homologacion in homologaciones %}
             <tr>
+                <td>{{ homologacion.nodo_origen|default:"-" }}</td>
                 <td>
                     <a href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
-                        {{ homologacion.estudiante.usuario.nombre|default:homologacion.estudiante_id }}
+                        {{ homologacion.asignatura_origen|default:"-" }}
                     </a>
                 </td>
-                <td>{{ homologacion.estudiante.programa_academico.nombre_programa }}</td>
-                <td>{{ homologacion.asignatura_origen }}</td>
-                <td>{{ homologacion.institucion_origen }}</td>
-                <td>{{ homologacion.programa_asignatura.asignatura.nombre_asignatura }}</td>
-                <td>
-                    {{ homologacion.profesor_evaluador.usuario.nombre|default:homologacion.profesor_evaluador_id }}
-                </td>
+                <td>{{ homologacion.institucion_origen|default:"-" }}</td>
+                <td>{{ homologacion.id_facultad|default:"-" }}</td>
+                <td>{{ homologacion.id_estudiante|default:"-" }}</td>
+                <td>{{ homologacion.id_profesor_evaluador|default:"-" }}</td>
                 <td>{{ homologacion.fecha_solicitud }}</td>
                 <td>
                     <span class="condor-status {% if homologacion.estado_homologacion == 'Aprobada' %}is-success{% elif homologacion.estado_homologacion == 'Rechazada' or homologacion.estado_homologacion == 'Cancelada' %}is-danger{% elif homologacion.estado_homologacion == 'En revision' %}is-warning{% else %}is-info{% endif %}">
@@ -55,9 +68,25 @@
                 </td>
                 <td>{{ homologacion.nota_obtenida|default:"-" }}</td>
                 <td>
-                    <a class="btn btn-sm btn-outline-primary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
-                        Ver
-                    </a>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de homologacion">
+                        <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+                            Ver
+                        </a>
+                        {% if can_write_homologaciones %}
+                            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_update' homologacion.id_homologacion %}">
+                                Editar
+                            </a>
+                            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
+                                Evaluador
+                            </a>
+                            <a class="btn btn-outline-success" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
+                                Evaluar
+                            </a>
+                            <a class="btn btn-outline-danger" href="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
+                                Cancelar
+                            </a>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
         {% empty %}

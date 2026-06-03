@@ -1,287 +1,267 @@
-import uuid
-from decimal import Decimal
-
 from django import forms
+from django.core.exceptions import ValidationError
+from django.db import connection
 from django.utils import timezone
 
-from apps.academica.models import Grupo, Profesor, ProgramaAsignatura
-from apps.accounts.roles import get_user_roles
-from apps.accounts.scope import (
-    get_coordinated_program_ids,
-    get_professor_for_user,
-    get_student_for_user,
-    is_superadmin,
+from apps.academica.distributed_write import (
+    asignar_evaluador_homologacion,
+    create_homologacion,
+    evaluar_homologacion,
+    update_homologacion,
 )
-from apps.homologaciones.models import Homologacion
+from apps.reportes.models import EstudianteDetalle, ProfesorDetalle
+
+HOMOLOGACION_STATUS_CHOICES = (
+    ("Solicitada", "Solicitada"),
+    ("En revision", "En revision"),
+    ("Aprobada", "Aprobada"),
+    ("Rechazada", "Rechazada"),
+    ("Cancelada", "Cancelada"),
+)
+
+EVALUATION_STATUS_CHOICES = (
+    ("Aprobada", "Aprobada"),
+    ("Rechazada", "Rechazada"),
+)
 
 
-def _professors_for_program(program_id):
-    professors_from_groups = Profesor.objects.filter(
-        grupos__programa_asignatura__programa_academico_id=program_id,
+def _choice_rows(sql, params=None):
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params or [])
+        return cursor.fetchall()
+
+
+class HomologacionForm(forms.Form):
+    id_estudiante = forms.ModelChoiceField(
+        label="Estudiante",
+        queryset=EstudianteDetalle.objects.none(),
     )
-    professors_from_faculty = Profesor.objects.filter(
-        facultad__programas__id_programa_academico=program_id,
+    id_profesor_evaluador = forms.ModelChoiceField(
+        label="Profesor evaluador",
+        queryset=ProfesorDetalle.objects.none(),
     )
-    return (
-        (professors_from_groups | professors_from_faculty)
-        .select_related(
-            "usuario",
-            "facultad",
-        )
-        .distinct()
+    asignatura_origen = forms.CharField(label="Asignatura origen", max_length=120)
+    institucion_origen = forms.CharField(label="Institucion origen", max_length=120)
+    id_programa_asignatura = forms.ChoiceField(label="Asignatura destino")
+    fecha_solicitud = forms.DateField(
+        label="Fecha de solicitud",
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    estado_homologacion = forms.ChoiceField(
+        label="Estado",
+        choices=HOMOLOGACION_STATUS_CHOICES,
+        initial="Solicitada",
     )
 
-
-def _default_evaluator_for_program_assignment(program_assignment):
-    professor = (
-        Grupo.objects.filter(
-            programa_asignatura=program_assignment,
-            profesor__isnull=False,
-        )
-        .select_related("profesor__usuario", "profesor__facultad")
-        .order_by("profesor__usuario__nombre")
-        .first()
-    )
-    if professor:
-        return professor.profesor
-
-    return _professors_for_program(
-        program_assignment.programa_academico_id,
-    ).first()
-
-
-class HomologacionSolicitudForm(forms.ModelForm):
-    class Meta:
-        model = Homologacion
-        fields = [
-            "asignatura_origen",
-            "institucion_origen",
-            "programa_asignatura",
-            "observacion",
-        ]
-        labels = {
-            "asignatura_origen": "Asignatura de origen",
-            "institucion_origen": "Institucion de origen",
-            "programa_asignatura": "Asignatura a homologar",
-            "observacion": "Observacion",
-        }
-        widgets = {
-            "observacion": forms.Textarea(attrs={"rows": 3}),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, homologacion=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-        self.student = get_student_for_user(user)
-        self.evaluator = None
-        queryset = ProgramaAsignatura.objects.none()
-        if self.student:
-            queryset = ProgramaAsignatura.objects.select_related(
-                "asignatura",
-                "programa_academico",
-            ).filter(
-                programa_academico=self.student.programa_academico,
-                asignatura__homologable=True,
-                estado="Activa",
+        self.homologacion = homologacion
+        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+            "nombre_facultad",
+            "nombre_programa",
+            "estudiante",
+        )
+        self.fields[
+            "id_profesor_evaluador"
+        ].queryset = ProfesorDetalle.objects.order_by("nombre_facultad", "profesor")
+        self.fields["id_estudiante"].label_from_instance = (
+            lambda student: (
+                f"{student.nombre_facultad} - {student.estudiante} "
+                f"({student.nombre_programa})"
             )
-        self.fields["programa_asignatura"].queryset = queryset
+        )
+        self.fields["id_profesor_evaluador"].label_from_instance = (
+            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+        )
+        self.fields["id_programa_asignatura"].choices = (
+            self._programa_asignatura_choices()
+        )
+
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
+        if homologacion is not None:
+            self.fields["id_estudiante"].disabled = True
+            self.fields["id_estudiante"].initial = homologacion.id_estudiante
+            self.fields["id_profesor_evaluador"].initial = (
+                homologacion.id_profesor_evaluador
+            )
+            self.fields["asignatura_origen"].initial = homologacion.asignatura_origen
+            self.fields["institucion_origen"].initial = homologacion.institucion_origen
+            self.fields["id_programa_asignatura"].initial = str(
+                homologacion.id_programa_asignatura,
+            )
+            self.fields["fecha_solicitud"].initial = homologacion.fecha_solicitud
+            self.fields[
+                "estado_homologacion"
+            ].initial = homologacion.estado_homologacion
+
+    def _programa_asignatura_choices(self):
+        rows = _choice_rows(
+            """
+            select
+                pa.id_programa_asignatura::text,
+                pa.id_facultad,
+                pa.id_programa_academico,
+                coalesce(a.nombre_asignatura, pa.cod_asignatura) as asignatura
+            from reportes.vw_programa_asignatura_global pa
+            left join institucional.asignatura a
+              on a.cod_asignatura = pa.cod_asignatura
+            where pa.estado = 'Activa'
+            order by pa.id_facultad, pa.id_programa_academico, asignatura
+            """,
+        )
+        return [
+            ("", "Seleccione una asignatura"),
+            *[
+                (
+                    row[0],
+                    f"{row[1]} - {row[2]} - {row[3]}",
+                )
+                for row in rows
+            ],
+        ]
+
     def clean(self):
         cleaned_data = super().clean()
-        program_assignment = cleaned_data.get("programa_asignatura")
+        student = cleaned_data.get("id_estudiante")
+        professor = cleaned_data.get("id_profesor_evaluador")
+        programa_asignatura = cleaned_data.get("id_programa_asignatura")
 
-        if not self.student:
-            raise forms.ValidationError(
-                "El usuario autenticado no tiene un registro de estudiante asociado.",
+        if student and professor and student.id_facultad != professor.id_facultad:
+            raise ValidationError("El evaluador debe pertenecer a la facultad.")
+
+        if student and programa_asignatura:
+            rows = _choice_rows(
+                """
+                select id_facultad
+                from reportes.vw_programa_asignatura_global
+                where id_programa_asignatura = %s
+                """,
+                [programa_asignatura],
             )
-
-        if not program_assignment:
-            return cleaned_data
-
-        if (
-            program_assignment.programa_academico_id
-            != self.student.programa_academico_id
-        ):
-            raise forms.ValidationError(
-                "La asignatura destino debe pertenecer al programa del estudiante.",
-            )
-
-        if not program_assignment.asignatura.homologable:
-            raise forms.ValidationError(
-                "La asignatura seleccionada no esta marcada como homologable.",
-            )
-
-        if Homologacion.objects.filter(
-            estudiante=self.student,
-            programa_asignatura=program_assignment,
-            estado_homologacion=Homologacion.EstadoHomologacion.APROBADA,
-        ).exists():
-            raise forms.ValidationError(
-                "Ya existe una homologacion aprobada para esta asignatura.",
-            )
-
-        self.evaluator = _default_evaluator_for_program_assignment(program_assignment)
-        if not self.evaluator:
-            raise forms.ValidationError(
-                "No hay un profesor disponible para recibir la solicitud.",
-            )
+            if not rows:
+                raise ValidationError("La asignatura destino no existe.")
+            if rows[0][0] != student.id_facultad:
+                raise ValidationError(
+                    "La asignatura destino no pertenece a la facultad.",
+                )
 
         return cleaned_data
 
-    def save(self, commit=True):
-        homologacion = super().save(commit=False)
-        homologacion.id_homologacion = uuid.uuid4()
-        homologacion.estudiante = self.student
-        homologacion.profesor_evaluador = self.evaluator
-        homologacion.fecha_solicitud = timezone.localdate()
-        homologacion.estado_homologacion = Homologacion.EstadoHomologacion.SOLICITADA
-        homologacion.fecha_respuesta = None
-        homologacion.nota_obtenida = None
-        if commit:
-            homologacion.save()
-        return homologacion
+    def save(self):
+        if self.homologacion is None:
+            return create_homologacion(
+                id_profesor_evaluador=self.cleaned_data["id_profesor_evaluador"].pk,
+                id_estudiante=self.cleaned_data["id_estudiante"].pk,
+                asignatura_origen=self.cleaned_data["asignatura_origen"],
+                institucion_origen=self.cleaned_data["institucion_origen"],
+                id_programa_asignatura=self.cleaned_data["id_programa_asignatura"],
+                fecha_solicitud=self.cleaned_data["fecha_solicitud"],
+                estado_homologacion=self.cleaned_data["estado_homologacion"],
+            )
+
+        return update_homologacion(
+            id_homologacion=self.homologacion.id_homologacion,
+            id_facultad=self.homologacion.id_facultad,
+            id_profesor_evaluador=self.cleaned_data["id_profesor_evaluador"].pk,
+            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            asignatura_origen=self.cleaned_data["asignatura_origen"],
+            institucion_origen=self.cleaned_data["institucion_origen"],
+            id_programa_asignatura=self.cleaned_data["id_programa_asignatura"],
+            fecha_solicitud=self.cleaned_data["fecha_solicitud"],
+            estado_homologacion=self.cleaned_data["estado_homologacion"],
+            observacion=self.homologacion.observacion,
+            fecha_respuesta=self.homologacion.fecha_respuesta,
+            nota_obtenida=self.homologacion.nota_obtenida,
+        )
 
 
-class HomologacionAsignarEvaluadorForm(forms.ModelForm):
-    class Meta:
-        model = Homologacion
-        fields = ["profesor_evaluador"]
-        labels = {"profesor_evaluador": "Profesor evaluador"}
+class HomologacionAssignEvaluatorForm(forms.Form):
+    id_profesor_evaluador = forms.ModelChoiceField(
+        label="Profesor evaluador",
+        queryset=ProfesorDetalle.objects.none(),
+    )
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, homologacion, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-        queryset = Profesor.objects.none()
-        if is_superadmin(user):
-            queryset = Profesor.objects.select_related("usuario", "facultad")
-        else:
-            program_ids = get_coordinated_program_ids(user)
-            if program_ids:
-                queryset = Profesor.objects.filter(
-                    facultad__programas__id_programa_academico__in=program_ids,
-                ).select_related("usuario", "facultad")
-        self.fields["profesor_evaluador"].queryset = queryset.distinct()
-        self.fields["profesor_evaluador"].widget.attrs.setdefault(
+        self.homologacion = homologacion
+        self.fields["id_profesor_evaluador"].queryset = (
+            ProfesorDetalle.objects.filter(id_facultad=homologacion.id_facultad)
+            .order_by("profesor")
+        )
+        self.fields["id_profesor_evaluador"].label_from_instance = (
+            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+        )
+        self.fields["id_profesor_evaluador"].initial = (
+            homologacion.id_profesor_evaluador
+        )
+        self.fields["id_profesor_evaluador"].widget.attrs.setdefault(
             "class",
             "form-control",
         )
 
-    def clean(self):
-        cleaned_data = super().clean()
-        homologacion = self.instance
-
-        if homologacion.estado_homologacion in {
-            Homologacion.EstadoHomologacion.APROBADA,
-            Homologacion.EstadoHomologacion.RECHAZADA,
-            Homologacion.EstadoHomologacion.CANCELADA,
-        }:
-            raise forms.ValidationError(
-                "Solo se puede asignar evaluador a solicitudes abiertas.",
-            )
-
-        return cleaned_data
-
-    def save(self, commit=True):
-        homologacion = super().save(commit=False)
-        homologacion.estado_homologacion = Homologacion.EstadoHomologacion.EN_REVISION
-        if commit:
-            homologacion.save()
-        return homologacion
+    def save(self):
+        return asignar_evaluador_homologacion(
+            id_homologacion=self.homologacion.id_homologacion,
+            id_facultad=self.homologacion.id_facultad,
+            id_profesor_evaluador=self.cleaned_data["id_profesor_evaluador"].pk,
+        )
 
 
-class HomologacionEvaluarForm(forms.ModelForm):
-    accion = forms.ChoiceField(
-        choices=(
-            (Homologacion.EstadoHomologacion.APROBADA, "Aprobar"),
-            (Homologacion.EstadoHomologacion.RECHAZADA, "Rechazar"),
-        ),
-        label="Decision",
+class HomologacionEvaluateForm(forms.Form):
+    estado_homologacion = forms.ChoiceField(
+        label="Estado",
+        choices=EVALUATION_STATUS_CHOICES,
+    )
+    observacion = forms.CharField(
+        label="Observacion",
+        max_length=255,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+    )
+    fecha_respuesta = forms.DateField(
+        label="Fecha de respuesta",
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    nota_obtenida = forms.DecimalField(
+        label="Nota obtenida",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
     )
 
-    class Meta:
-        model = Homologacion
-        fields = ["accion", "nota_obtenida", "observacion"]
-        labels = {
-            "nota_obtenida": "Nota obtenida",
-            "observacion": "Observacion",
-        }
-        widgets = {
-            "observacion": forms.Textarea(attrs={"rows": 3}),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, homologacion, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
+        self.homologacion = homologacion
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
+        self.fields["estado_homologacion"].initial = homologacion.estado_homologacion
+        self.fields["observacion"].initial = homologacion.observacion
+        self.fields["fecha_respuesta"].initial = (
+            homologacion.fecha_respuesta or timezone.localdate()
+        )
+        self.fields["nota_obtenida"].initial = homologacion.nota_obtenida
 
     def clean(self):
         cleaned_data = super().clean()
-        action = cleaned_data.get("accion")
-        grade = cleaned_data.get("nota_obtenida")
-        observation = cleaned_data.get("observacion")
-        homologacion = self.instance
-
         if (
-            homologacion.estado_homologacion
-            == Homologacion.EstadoHomologacion.CANCELADA
+            cleaned_data.get("estado_homologacion") == "Aprobada"
+            and cleaned_data.get("nota_obtenida") is None
         ):
-            raise forms.ValidationError("No se puede evaluar una solicitud cancelada.")
-        if homologacion.estado_homologacion not in {
-            Homologacion.EstadoHomologacion.SOLICITADA,
-            Homologacion.EstadoHomologacion.EN_REVISION,
-        }:
-            raise forms.ValidationError(
-                "Solo se pueden evaluar solicitudes abiertas o en revision.",
-            )
-
-        roles = set(get_user_roles(self.user))
-        professor = get_professor_for_user(self.user)
-        if not is_superadmin(self.user) and (
-            "docente" not in roles or professor != homologacion.profesor_evaluador
-        ):
-            raise forms.ValidationError(
-                "Solo el docente evaluador asignado puede evaluar esta solicitud.",
-            )
-
-        if action == Homologacion.EstadoHomologacion.APROBADA:
-            if grade is None:
-                raise forms.ValidationError(
-                    "Una homologacion aprobada debe tener nota obtenida.",
-                )
-            if grade < Decimal("0.0") or grade > Decimal("5.0"):
-                raise forms.ValidationError("La nota debe estar entre 0.0 y 5.0.")
-            if (
-                Homologacion.objects.filter(
-                    estudiante=homologacion.estudiante,
-                    programa_asignatura=homologacion.programa_asignatura,
-                    estado_homologacion=Homologacion.EstadoHomologacion.APROBADA,
-                )
-                .exclude(pk=homologacion.pk)
-                .exists()
-            ):
-                raise forms.ValidationError(
-                    "Ya existe una homologacion aprobada para esta asignatura.",
-                )
-
-        if action == Homologacion.EstadoHomologacion.RECHAZADA and not observation:
-            raise forms.ValidationError(
-                "La observacion es obligatoria al rechazar una solicitud.",
-            )
-
+            raise ValidationError("La nota obtenida es obligatoria para aprobar.")
         return cleaned_data
 
-    def save(self, commit=True):
-        homologacion = super().save(commit=False)
-        homologacion.estado_homologacion = self.cleaned_data["accion"]
-        homologacion.fecha_respuesta = timezone.localdate()
-        if (
-            homologacion.estado_homologacion
-            == Homologacion.EstadoHomologacion.RECHAZADA
-        ):
-            homologacion.nota_obtenida = None
-        if commit:
-            homologacion.save()
-        return homologacion
+    def save(self):
+        return evaluar_homologacion(
+            id_homologacion=self.homologacion.id_homologacion,
+            id_facultad=self.homologacion.id_facultad,
+            estado_homologacion=self.cleaned_data["estado_homologacion"],
+            observacion=self.cleaned_data.get("observacion") or None,
+            fecha_respuesta=self.cleaned_data["fecha_respuesta"],
+            nota_obtenida=self.cleaned_data.get("nota_obtenida"),
+        )

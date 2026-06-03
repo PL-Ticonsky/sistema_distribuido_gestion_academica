@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Anular recibo{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">Volver a recibo</a></p>
+
+<h1>Anular recibo</h1>
+<p>El recibo se marcara como Anulado.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Anular recibo</button>
+    <a class="btn btn-outline-secondary" href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">Cancelar</a>
+</form>
+{% endblock %}

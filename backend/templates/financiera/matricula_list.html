@@ -6,67 +6,85 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="mb-1">Matriculas</h1>
-        <p class="mb-0">Estado academico-administrativo asociado a recibos pagados.</p>
+        <p class="mb-0">Lectura global desde reportes.vw_matriculas_detalle.</p>
     </div>
     {% if can_manage_financial %}
-        <a class="btn btn-primary" href="{% url 'financiera:matricula_create' %}">
-            <i class="bi bi-plus-circle"></i>
-            Crear matricula
-        </a>
+        <a class="btn btn-primary" href="{% url 'financiera:matricula_create' %}">Crear matricula</a>
     {% endif %}
 </div>
+
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="nombre_programa" value="{{ active_filters.nombre_programa }}" placeholder="Programa">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="id_periodo_academico" value="{{ active_filters.id_periodo_academico }}" placeholder="Periodo">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="estado_pago" value="{{ active_filters.estado_pago }}" placeholder="Pago">
+    </div>
+    <div class="col-12 col-md-2">
+        <input class="form-control" type="text" name="estado_matricula" value="{{ active_filters.estado_matricula }}" placeholder="Matricula">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
 
 <div class="table-responsive">
 <table class="table table-hover align-middle">
     <thead>
         <tr>
+            <th>Nodo</th>
             <th>Estudiante</th>
+            <th>Facultad</th>
             <th>Programa</th>
             <th>Periodo</th>
             <th>Estado matricula</th>
             <th>Estado pago</th>
-            {% if can_manage_financial %}
-                <th>Acciones</th>
-            {% endif %}
+            <th>Valor pagado</th>
+            <th>Fecha pago</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
         {% for matricula in matriculas %}
             <tr>
-                <td>
-                    <a href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
-                        {{ matricula.recibo.estudiante.usuario.nombre|default:matricula.recibo.estudiante_id }}
-                    </a>
-                </td>
-                <td>
-                    {{ matricula.recibo.tarifa_matricula.programa_academico.nombre_programa }}
-                </td>
-                <td>
-                    {{ matricula.recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}
-                </td>
+                <td>{{ matricula.nodo_origen|default:"-" }}</td>
+                <td>{{ matricula.estudiante|default:"-" }}</td>
+                <td>{{ matricula.nombre_facultad|default:"-" }}</td>
+                <td>{{ matricula.nombre_programa|default:"-" }}</td>
+                <td>{{ matricula.id_periodo_academico|default:"-" }}</td>
                 <td>
                     <span class="condor-status {% if matricula.estado_matricula == 'Activa' or matricula.estado_matricula == 'Finalizada' %}is-success{% elif matricula.estado_matricula == 'Pendiente' %}is-warning{% elif matricula.estado_matricula == 'Cancelada' or matricula.estado_matricula == 'Anulada' %}is-danger{% else %}is-muted{% endif %}">
                         {{ matricula.estado_matricula }}
                     </span>
                 </td>
                 <td>
-                    <span class="condor-status {% if matricula.recibo.estado_pago == 'Pagado' %}is-success{% elif matricula.recibo.estado_pago == 'Pendiente' %}is-warning{% elif matricula.recibo.estado_pago == 'Anulado' or matricula.recibo.estado_pago == 'Vencido' %}is-danger{% else %}is-muted{% endif %}">
-                        {{ matricula.recibo.estado_pago }}
+                    <span class="condor-status {% if matricula.estado_pago == 'Pagado' %}is-success{% elif matricula.estado_pago == 'Pendiente' %}is-warning{% elif matricula.estado_pago == 'Anulado' or matricula.estado_pago == 'Vencido' %}is-danger{% else %}is-muted{% endif %}">
+                        {{ matricula.estado_pago }}
                     </span>
                 </td>
-                {% if can_manage_financial %}
-                    <td>
-                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">
-                            Gestionar
-                        </a>
-                    </td>
-                {% endif %}
+                <td>{{ matricula.valor_pagado|default:"-" }}</td>
+                <td>{{ matricula.fecha_pago|default:"-" }}</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:matricula_detail' matricula.id_matricula %}">Ver</a>
+                        {% if can_manage_financial %}
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'financiera:matricula_update' matricula.id_matricula %}">Editar</a>
+                            {% if matricula.estado_matricula != "Cancelada" %}
+                                <a class="btn btn-sm btn-outline-danger" href="{% url 'financiera:matricula_cancelar' matricula.id_matricula %}">Cancelar</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="{% if can_manage_financial %}6{% else %}5{% endif %}">
-                    No hay matriculas registradas.
-                </td>
+                <td colspan="10">No hay matriculas registradas.</td>
             </tr>
         {% endfor %}
     </tbody>

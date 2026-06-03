@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Crear matricula{% endblock %}
+{% block title %}{{ form_title|default:"Matricula" }}{% endblock %}
 
 {% block content %}
 <p><a href="{% url 'financiera:matricula_list' %}">Volver a matriculas</a></p>
 
-<h1>Crear matricula</h1>
+<h1>{{ form_title|default:"Matricula" }}</h1>
 
 <form method="post" class="mt-3">
     {% csrf_token %}
@@ -17,6 +17,6 @@
             {{ field.errors }}
         </div>
     {% endfor %}
-    <button class="btn btn-primary" type="submit">Crear matricula</button>
+    <button class="btn btn-primary" type="submit">{{ submit_label|default:"Guardar matricula" }}</button>
 </form>
 {% endblock %}

@@ -1,6 +1,10 @@
 from django.db import models
 
 
+def schema_qualified_db_table(schema, table):
+    return f'"{schema}"."{table}"'
+
+
 class Facultad(models.Model):
     id_facultad = models.CharField(max_length=10, primary_key=True)
     nombre_facultad = models.CharField(max_length=80)
@@ -14,7 +18,7 @@ class Facultad(models.Model):
 
     class Meta:
         managed = False
-        db_table = "facultad"
+        db_table = schema_qualified_db_table("institucional", "facultad")
         ordering = ["nombre_facultad"]
         verbose_name = "facultad"
         verbose_name_plural = "facultades"
@@ -55,7 +59,7 @@ class ProgramaAcademico(models.Model):
 
     class Meta:
         managed = False
-        db_table = "programa_academico"
+        db_table = schema_qualified_db_table("institucional", "programa_academico")
         ordering = ["nombre_programa"]
         verbose_name = "programa academico"
         verbose_name_plural = "programas academicos"
@@ -78,10 +82,34 @@ class PeriodoAcademico(models.Model):
 
     class Meta:
         managed = False
-        db_table = "periodo_academico"
+        db_table = schema_qualified_db_table("institucional", "periodo_academico")
         ordering = ["-fecha_inicio", "id_periodo_academico"]
         verbose_name = "periodo academico"
         verbose_name_plural = "periodos academicos"
 
     def __str__(self):
         return self.id_periodo_academico
+
+
+class Asignatura(models.Model):
+    class Estado(models.TextChoices):
+        ACTIVA = "Activa", "Activa"
+        INACTIVA = "Inactiva", "Inactiva"
+
+    cod_asignatura = models.CharField(max_length=20, primary_key=True)
+    nombre_asignatura = models.CharField(max_length=120)
+    creditos = models.IntegerField()
+    estado = models.CharField(max_length=20, choices=Estado.choices)
+    horas_teoria = models.IntegerField()
+    horas_pract = models.IntegerField()
+    homologable = models.BooleanField()
+
+    class Meta:
+        managed = False
+        db_table = schema_qualified_db_table("institucional", "asignatura")
+        ordering = ["nombre_asignatura"]
+        verbose_name = "asignatura"
+        verbose_name_plural = "asignaturas"
+
+    def __str__(self):
+        return self.nombre_asignatura

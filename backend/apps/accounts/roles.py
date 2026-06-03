@@ -99,11 +99,9 @@ def get_dashboard_options(user):
         ],
         "coordinador": [
             {
-                "title": "Agregar estudiante",
-                "description": (
-                    "Registrar un nuevo estudiante en el programa que coordinas."
-                ),
-                "url": reverse("academica:estudiante_create"),
+                "title": "Estudiantes",
+                "description": "Consultar estudiantes por programa y facultad.",
+                "url": reverse("academica:estudiante_list"),
             },
             {
                 "title": "Gestion del programa",
@@ -151,9 +149,9 @@ def get_dashboard_options(user):
         ],
         "superadmin": [
             {
-                "title": "Agregar estudiante",
-                "description": "Registrar estudiantes en cualquier programa activo.",
-                "url": reverse("academica:estudiante_create"),
+                "title": "Estudiantes",
+                "description": "Consultar estudiantes consolidados por facultad.",
+                "url": reverse("academica:estudiante_list"),
             },
             {
                 "title": "Administracion general",

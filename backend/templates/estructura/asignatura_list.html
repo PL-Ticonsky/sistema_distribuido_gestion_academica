@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Asignaturas institucionales{% endblock %}
+{% block page_title %}Asignaturas institucionales{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mt-0 mb-1">Asignaturas institucionales</h1>
+        <p class="mb-0">Catalogo central de asignaturas en sga_central.</p>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Asignatura</th>
+                <th>Codigo</th>
+                <th>Creditos</th>
+                <th>Estado</th>
+                <th>Horas teoria</th>
+                <th>Horas practica</th>
+                <th>Homologable</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asignatura in asignaturas %}
+                <tr>
+                    <td>{{ asignatura.nombre_asignatura }}</td>
+                    <td>{{ asignatura.cod_asignatura }}</td>
+                    <td>{{ asignatura.creditos }}</td>
+                    <td>{{ asignatura.estado }}</td>
+                    <td>{{ asignatura.horas_teoria }}</td>
+                    <td>{{ asignatura.horas_pract }}</td>
+                    <td>{{ asignatura.homologable|yesno:"Si,No" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7">No hay asignaturas registradas.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+    <nav aria-label="Paginacion de asignaturas">
+        <ul class="pagination mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                </li>
+            {% endif %}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">{{ page_obj.number }}</span>
+            </li>
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% endblock %}

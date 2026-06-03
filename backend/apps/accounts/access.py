@@ -29,6 +29,7 @@ INDICATOR_ROLES = (
     "superadmin",
 )
 AUDIT_ROLES = ("superadmin",)
+REPORT_ROLES = ("coordinador", "decano", "administrativo", "superadmin")
 
 
 def user_has_any_role(user, allowed_roles):

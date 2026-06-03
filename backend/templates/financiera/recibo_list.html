@@ -6,21 +6,34 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="mb-1">Recibos</h1>
-        <p class="mb-0">Seguimiento financiero por estudiante, periodo y estado de pago.</p>
+        <p class="mb-0">Seguimiento financiero central en financiero.recibo.</p>
     </div>
     {% if can_manage_financial %}
-        <a class="btn btn-primary" href="{% url 'financiera:recibo_create' %}">
-            <i class="bi bi-plus-circle"></i>
-            Crear recibo
-        </a>
+        <a class="btn btn-primary" href="{% url 'financiera:recibo_create' %}">Crear recibo</a>
     {% endif %}
 </div>
+
+<form class="row g-2 mb-3" method="get">
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="id_facultad" value="{{ active_filters.id_facultad }}" placeholder="Facultad">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="tarifa_matricula__periodo_academico_id" value="{{ active_filters.tarifa_matricula__periodo_academico_id }}" placeholder="Periodo">
+    </div>
+    <div class="col-12 col-md-3">
+        <input class="form-control" type="text" name="estado_pago" value="{{ active_filters.estado_pago }}" placeholder="Estado pago">
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+    </div>
+</form>
 
 <div class="table-responsive">
 <table class="table table-hover align-middle">
     <thead>
         <tr>
             <th>Estudiante</th>
+            <th>Facultad</th>
             <th>Programa</th>
             <th>Periodo</th>
             <th>Estado pago</th>
@@ -28,19 +41,14 @@
             <th>Valor pagado</th>
             <th>Fecha pago</th>
             <th>Metodo</th>
-            {% if can_manage_financial %}
-                <th>Acciones</th>
-            {% endif %}
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
         {% for recibo in recibos %}
             <tr>
-                <td>
-                    <a href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">
-                        {{ recibo.estudiante.usuario.nombre|default:recibo.estudiante_id }}
-                    </a>
-                </td>
+                <td>{{ recibo.id_estudiante }}</td>
+                <td>{{ recibo.id_facultad }}</td>
                 <td>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</td>
                 <td>{{ recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</td>
                 <td>
@@ -52,19 +60,21 @@
                 <td>{{ recibo.valor_pagado|default:"-" }}</td>
                 <td>{{ recibo.fecha_pago|default:"-" }}</td>
                 <td>{{ recibo.metodo_pago|default:"-" }}</td>
-                {% if can_manage_financial %}
-                    <td>
-                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:recibo_update' recibo.id_recibo %}">
-                            Editar
-                        </a>
-                    </td>
-                {% endif %}
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'financiera:recibo_detail' recibo.id_recibo %}">Ver</a>
+                        {% if can_manage_financial %}
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'financiera:recibo_update' recibo.id_recibo %}">Editar</a>
+                            {% if recibo.estado_pago != "Anulado" %}
+                                <a class="btn btn-sm btn-outline-danger" href="{% url 'financiera:recibo_anular' recibo.id_recibo %}">Anular</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="{% if can_manage_financial %}9{% else %}8{% endif %}">
-                    No hay recibos registrados.
-                </td>
+                <td colspan="10">No hay recibos registrados.</td>
             </tr>
         {% endfor %}
     </tbody>

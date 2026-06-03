@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Agregar estudiante{% endblock %}
+{% block title %}{{ form_title|default:"Estudiante" }}{% endblock %}
 
 {% block content %}
-<p><a href="{% url 'accounts:dashboard' %}">Volver al dashboard</a></p>
+<p><a href="{% url 'academica:estudiante_list' %}">Volver a estudiantes</a></p>
 
 <div class="mb-3">
-    <h1 class="mb-1">Agregar estudiante</h1>
+    <h1 class="mb-1">{{ form_title|default:"Estudiante" }}</h1>
     <p class="mb-0">
-        Crea el usuario, asigna el rol estudiante y genera la contrasena demo documentada en
-        <code>docs/17_usuarios_y_credenciales_demo.md</code>.
+        La lectura se confirma desde reportes.vw_estudiantes_detalle y la escritura se envia al esquema FDW segun la facultad.
     </p>
 </div>
 
@@ -26,6 +25,9 @@
             <div class="col-12 col-md-6">
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
+                {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
                 {{ field.errors }}
             </div>
         {% endfor %}
@@ -33,9 +35,9 @@
     <div class="d-flex flex-wrap gap-2 mt-4">
         <button class="btn btn-primary" type="submit">
             <i class="bi bi-person-plus"></i>
-            Guardar estudiante
+            {{ submit_label|default:"Guardar estudiante" }}
         </button>
-        <a class="btn btn-outline-secondary" href="{% url 'accounts:dashboard' %}">
+        <a class="btn btn-outline-secondary" href="{% url 'academica:estudiante_list' %}">
             Cancelar
         </a>
     </div>

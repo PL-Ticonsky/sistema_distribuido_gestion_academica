@@ -7,45 +7,39 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0">Detalle de homologacion</h1>
-    <div class="d-flex flex-wrap gap-2">
-        {% if can_assign_evaluator %}
+    {% if can_write_homologaciones %}
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_update' homologacion.id_homologacion %}">
+                Editar
+            </a>
             <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
                 Asignar evaluador
             </a>
-        {% endif %}
-        {% if can_evaluate_homologacion %}
-            <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
+            <a class="btn btn-outline-success" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
                 Evaluar
             </a>
-        {% endif %}
-        {% if can_cancel_homologacion %}
-            <form method="post" action="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-danger" type="submit">Cancelar solicitud</button>
-            </form>
-        {% endif %}
-    </div>
+            <a class="btn btn-outline-danger" href="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
+                Cancelar
+            </a>
+        </div>
+    {% endif %}
 </div>
 
 <dl class="row">
+    <dt>Nodo origen</dt>
+    <dd>{{ homologacion.nodo_origen|default:"-" }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ homologacion.id_facultad|default:"-" }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ homologacion.estudiante.usuario.nombre|default:homologacion.estudiante_id }}</dd>
-    <dt>Correo del estudiante</dt>
-    <dd>{{ homologacion.estudiante.usuario.correo|default:"-" }}</dd>
-    <dt>Programa del estudiante</dt>
-    <dd>{{ homologacion.estudiante.programa_academico.nombre_programa }}</dd>
-    <dt>Asignatura origen</dt>
-    <dd>{{ homologacion.asignatura_origen }}</dd>
-    <dt>Institucion origen</dt>
-    <dd>{{ homologacion.institucion_origen }}</dd>
-    <dt>Asignatura homologada</dt>
-    <dd>{{ homologacion.programa_asignatura.asignatura.nombre_asignatura }}</dd>
-    <dt>Programa de asignatura homologada</dt>
-    <dd>{{ homologacion.programa_asignatura.programa_academico.nombre_programa }}</dd>
+    <dd>{{ homologacion.id_estudiante|default:"No disponible en la vista" }}</dd>
     <dt>Profesor evaluador</dt>
-    <dd>
-        {{ homologacion.profesor_evaluador.usuario.nombre|default:homologacion.profesor_evaluador_id }}
-    </dd>
+    <dd>{{ homologacion.id_profesor_evaluador|default:"No disponible en la vista" }}</dd>
+    <dt>Asignatura origen</dt>
+    <dd>{{ homologacion.asignatura_origen|default:"-" }}</dd>
+    <dt>Institucion origen</dt>
+    <dd>{{ homologacion.institucion_origen|default:"-" }}</dd>
+    <dt>Programa asignatura destino</dt>
+    <dd>{{ homologacion.id_programa_asignatura|default:"No disponible en la vista" }}</dd>
     <dt>Fecha de solicitud</dt>
     <dd>{{ homologacion.fecha_solicitud }}</dd>
     <dt>Fecha de respuesta</dt>
@@ -56,5 +50,7 @@
     <dd>{{ homologacion.nota_obtenida|default:"-" }}</dd>
     <dt>Observacion</dt>
     <dd>{{ homologacion.observacion|default:"-" }}</dd>
+    <dt>ID homologacion</dt>
+    <dd>{{ homologacion.id_homologacion }}</dd>
 </dl>
 {% endblock %}

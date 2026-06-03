@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Desactivar estudiante{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:estudiante_detail' estudiante.id_estudiante %}">Volver al detalle</a></p>
+
+<h1>Desactivar estudiante</h1>
+
+<div class="alert alert-warning">
+    Esta accion no elimina fisicamente el registro. Solo cambia el estado del estudiante a Inactivo en el nodo FDW correspondiente.
+</div>
+
+<dl>
+    <dt>Estudiante</dt>
+    <dd>{{ estudiante.estudiante|default:estudiante.id_estudiante }}</dd>
+    <dt>Facultad</dt>
+    <dd>{{ estudiante.nombre_facultad|default:estudiante.id_facultad }}</dd>
+    <dt>Programa</dt>
+    <dd>{{ estudiante.nombre_programa|default:estudiante.id_programa_academico }}</dd>
+    <dt>Estado actual</dt>
+    <dd>{{ estudiante.estado_estudiante|default:"-" }}</dd>
+</dl>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-danger" type="submit">
+            Desactivar
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academica:estudiante_detail' estudiante.id_estudiante %}">
+            Cancelar
+        </a>
+    </div>
+</form>
+{% endblock %}
