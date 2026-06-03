@@ -144,10 +144,14 @@ class HomologacionForm(forms.Form):
             f"""
             select
                 pa.id_programa_asignatura::text,
-                pa.id_facultad,
-                pa.id_programa_academico,
+                coalesce(f.nombre_facultad, pa.id_facultad),
+                coalesce(p.nombre_programa, pa.id_programa_academico),
                 coalesce(a.nombre_asignatura, pa.cod_asignatura) as asignatura
             from reportes.vw_programa_asignatura_global pa
+            left join institucional.facultad f
+              on f.id_facultad = pa.id_facultad
+            left join institucional.programa_academico p
+              on p.id_programa_academico = pa.id_programa_academico
             left join institucional.asignatura a
               on a.cod_asignatura = pa.cod_asignatura
             where {" and ".join(where)}
@@ -235,7 +239,10 @@ class HomologacionAssignEvaluatorForm(forms.Form):
             .order_by("profesor")
         )
         self.fields["id_profesor_evaluador"].label_from_instance = (
-            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+            lambda professor: (
+                f"{professor.profesor} <{professor.correo}> - "
+                f"{professor.nombre_facultad}"
+            )
         )
         self.fields["id_profesor_evaluador"].initial = (
             homologacion.id_profesor_evaluador

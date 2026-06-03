@@ -334,10 +334,14 @@ class GrupoCreateForm(forms.Form):
             f"""
             select
                 pa.id_programa_asignatura::text,
-                pa.id_facultad,
-                pa.id_programa_academico,
+                coalesce(f.nombre_facultad, pa.id_facultad),
+                coalesce(p.nombre_programa, pa.id_programa_academico),
                 coalesce(a.nombre_asignatura, pa.cod_asignatura) as asignatura
             from reportes.vw_programa_asignatura_global pa
+            left join institucional.facultad f
+              on f.id_facultad = pa.id_facultad
+            left join institucional.programa_academico p
+              on p.id_programa_academico = pa.id_programa_academico
             left join institucional.asignatura a
               on a.cod_asignatura = pa.cod_asignatura
             where {" and ".join(where)}
@@ -365,7 +369,11 @@ class GrupoCreateForm(forms.Form):
         where_sql = f"where {' and '.join(where)}" if where else ""
         rows = _choice_rows(
             f"""
-            select id_profesor::text, id_facultad, coalesce(profesor, correo)
+            select
+                id_profesor::text,
+                nombre_facultad,
+                coalesce(profesor, correo),
+                correo
             from reportes.vw_profesores_detalle
             {where_sql}
             order by id_facultad, profesor
@@ -374,7 +382,7 @@ class GrupoCreateForm(forms.Form):
         )
         return [
             ("", "Sin asignar"),
-            *[(row[0], f"{row[1]} - {row[2]}") for row in rows],
+            *[(row[0], f"{row[2]} <{row[3]}> - {row[1]}") for row in rows],
         ]
 
     def clean(self):

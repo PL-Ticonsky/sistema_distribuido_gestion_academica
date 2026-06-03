@@ -7,7 +7,7 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="mb-1">{{ inscripcion.estudiante|default:inscripcion.id_estudiante }}</h1>
+        <h1 class="mb-1">{{ inscripcion.estudiante|default:"Inscripcion academica" }}</h1>
         <p class="text-muted mb-0">{{ inscripcion.nombre_asignatura|default:"Inscripcion academica" }}</p>
     </div>
     {% if can_write_enrollments %}
@@ -34,7 +34,7 @@
     <dt class="col-sm-3">Asignatura</dt>
     <dd class="col-sm-9">{{ inscripcion.nombre_asignatura|default:inscripcion.cod_asignatura }}</dd>
     <dt class="col-sm-3">Grupo</dt>
-    <dd class="col-sm-9">{{ inscripcion.codigo_grupo|default:inscripcion.id_grupo }}</dd>
+    <dd class="col-sm-9">{{ inscripcion.codigo_grupo|default:"Grupo no disponible" }}</dd>
     <dt class="col-sm-3">Profesor</dt>
     <dd class="col-sm-9">{{ inscripcion.profesor|default:"-" }}</dd>
     <dt class="col-sm-3">Estado</dt>
@@ -43,7 +43,5 @@
     <dd class="col-sm-9">{{ inscripcion.nota_final|default:"-" }}</dd>
     <dt class="col-sm-3">Intento</dt>
     <dd class="col-sm-9">{{ inscripcion.intento|default:"-" }}</dd>
-    <dt class="col-sm-3">ID inscripcion</dt>
-    <dd class="col-sm-9">{{ inscripcion.id_inscripcion }}</dd>
 </dl>
 {% endblock %}

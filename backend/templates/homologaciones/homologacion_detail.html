@@ -29,7 +29,7 @@
     <dt>Nodo origen</dt>
     <dd>{{ homologacion.nodo_origen|default:"-" }}</dd>
     <dt>Facultad</dt>
-    <dd>{{ homologacion.id_facultad|default:"-" }}</dd>
+    <dd>{{ facultad_label|default:homologacion.id_facultad|default:"-" }}</dd>
     <dt>Estudiante</dt>
     <dd>{{ estudiante_label|default:"No disponible en la vista" }}</dd>
     <dt>Profesor evaluador</dt>
@@ -39,7 +39,7 @@
     <dt>Institucion origen</dt>
     <dd>{{ homologacion.institucion_origen|default:"-" }}</dd>
     <dt>Programa asignatura destino</dt>
-    <dd>{{ homologacion.id_programa_asignatura|default:"No disponible en la vista" }}</dd>
+    <dd>{{ asignatura_destino_label|default:"No disponible en la vista" }}</dd>
     <dt>Fecha de solicitud</dt>
     <dd>{{ homologacion.fecha_solicitud }}</dd>
     <dt>Fecha de respuesta</dt>
@@ -50,7 +50,5 @@
     <dd>{{ homologacion.nota_obtenida|default:"-" }}</dd>
     <dt>Observacion</dt>
     <dd>{{ homologacion.observacion|default:"-" }}</dd>
-    <dt>ID homologacion</dt>
-    <dd>{{ homologacion.id_homologacion }}</dd>
 </dl>
 {% endblock %}

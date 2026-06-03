@@ -65,7 +65,7 @@
                     </a>
                 </td>
                 <td>{{ homologacion.institucion_origen|default:"-" }}</td>
-                <td>{{ homologacion.id_facultad|default:"-" }}</td>
+                <td>{{ homologacion.facultad_label|default:homologacion.id_facultad|default:"-" }}</td>
                 <td>{{ homologacion.estudiante_label|default:"-" }}</td>
                 <td>{{ homologacion.profesor_label|default:"-" }}</td>
                 <td>{{ homologacion.fecha_solicitud }}</td>

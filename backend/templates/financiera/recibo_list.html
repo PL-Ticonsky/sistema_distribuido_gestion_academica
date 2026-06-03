@@ -59,8 +59,8 @@
     <tbody>
         {% for recibo in recibos %}
             <tr>
-                <td>{{ recibo.estudiante_label|default:recibo.id_estudiante }}</td>
-                <td>{{ recibo.id_facultad }}</td>
+                <td>{{ recibo.estudiante_label|default:"Estudiante no disponible" }}</td>
+                <td>{{ recibo.facultad_label|default:recibo.id_facultad }}</td>
                 <td>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</td>
                 <td>{{ recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</td>
                 <td>

@@ -7,7 +7,7 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="mb-1">{{ estudiante.estudiante|default:estudiante.id_estudiante }}</h1>
+        <h1 class="mb-1">{{ estudiante.estudiante|default:"Estudiante sin nombre" }}</h1>
         <p class="text-muted mb-0">{{ estudiante.correo|default:"Sin correo" }}</p>
     </div>
     {% if can_create_students %}
@@ -33,7 +33,5 @@
     <dd class="col-sm-9">{{ estudiante.estado_estudiante|default:"-" }}</dd>
     <dt class="col-sm-3">Limite matriculas</dt>
     <dd class="col-sm-9">{{ estudiante.limite_matriculas|default:"-" }}</dd>
-    <dt class="col-sm-3">ID estudiante</dt>
-    <dd class="col-sm-9">{{ estudiante.id_estudiante }}</dd>
 </dl>
 {% endblock %}

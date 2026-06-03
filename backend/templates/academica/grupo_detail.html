@@ -8,7 +8,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="mb-1">{{ grupo.nombre_asignatura|default:"Grupo academico" }}</h1>
-        <p class="text-muted mb-0">{{ grupo.codigo_grupo|default:grupo.id_grupo }}</p>
+        <p class="text-muted mb-0">{{ grupo.codigo_grupo|default:"Sin codigo de grupo" }}</p>
     </div>
     {% if can_create_groups %}
         <div class="d-flex flex-wrap gap-2">
@@ -39,7 +39,5 @@
     <dd class="col-sm-9">{{ grupo.cupo_maximo|default:"-" }}</dd>
     <dt class="col-sm-3">Estado</dt>
     <dd class="col-sm-9">{{ grupo.estado_grupo|default:"-" }}</dd>
-    <dt class="col-sm-3">ID grupo</dt>
-    <dd class="col-sm-9">{{ grupo.id_grupo }}</dd>
 </dl>
 {% endblock %}

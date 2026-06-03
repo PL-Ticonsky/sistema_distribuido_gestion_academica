@@ -16,12 +16,53 @@ def facultad_choices(blank_label="Todas las facultades"):
     return _blank(blank_label) + [(value, label) for value, label in rows]
 
 
+def facultad_labels(ids):
+    ids = [value for value in ids if value]
+    if not ids:
+        return {}
+    rows = Facultad.objects.filter(id_facultad__in=ids).values_list(
+        "id_facultad",
+        "nombre_facultad",
+    )
+    return {value: label for value, label in rows}
+
+
 def programa_choices(id_facultad=None, blank_label="Todos los programas"):
     queryset = ProgramaAcademico.objects.order_by("nombre_programa")
     if id_facultad:
         queryset = queryset.filter(facultad_id=id_facultad)
     rows = queryset.values_list("id_programa_academico", "nombre_programa")
     return _blank(blank_label) + [(value, label) for value, label in rows]
+
+
+def programa_asignatura_labels(ids):
+    ids = [value for value in ids if value]
+    if not ids:
+        return {}
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select
+                pa.id_programa_asignatura,
+                coalesce(f.nombre_facultad, pa.id_facultad),
+                coalesce(p.nombre_programa, pa.id_programa_academico),
+                coalesce(a.nombre_asignatura, pa.cod_asignatura)
+            from reportes.vw_programa_asignatura_global pa
+            left join institucional.facultad f
+              on f.id_facultad = pa.id_facultad
+            left join institucional.programa_academico p
+              on p.id_programa_academico = pa.id_programa_academico
+            left join institucional.asignatura a
+              on a.cod_asignatura = pa.cod_asignatura
+            where pa.id_programa_asignatura = any(%s)
+            """,
+            [ids],
+        )
+        rows = cursor.fetchall()
+    return {
+        row[0]: f"{row[1]} - {row[2]} - {row[3]}"
+        for row in rows
+    }
 
 
 def periodo_choices(blank_label="Todos los periodos"):

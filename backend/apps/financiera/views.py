@@ -20,6 +20,7 @@ from apps.reportes.choices import (
     distinct_choices,
     estudiante_labels,
     facultad_choices,
+    facultad_labels,
     periodo_choices,
     programa_choices,
     recibo_labels,
@@ -226,8 +227,12 @@ class ReciboListView(FinancialReadOnlyListView):
         labels = estudiante_labels(
             [recibo.id_estudiante for recibo in context["recibos"]],
         )
+        faculties = facultad_labels(
+            [recibo.id_facultad for recibo in context["recibos"]],
+        )
         for recibo in context["recibos"]:
             recibo.estudiante_label = labels.get(recibo.id_estudiante)
+            recibo.facultad_label = faculties.get(recibo.id_facultad)
         return context
 
 
@@ -249,7 +254,9 @@ class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["can_manage_financial"] = user_can_manage_financial(self.request.user)
         labels = estudiante_labels([self.object.id_estudiante])
+        faculties = facultad_labels([self.object.id_facultad])
         context["estudiante_label"] = labels.get(self.object.id_estudiante)
+        context["facultad_label"] = faculties.get(self.object.id_facultad)
         return context
 
 

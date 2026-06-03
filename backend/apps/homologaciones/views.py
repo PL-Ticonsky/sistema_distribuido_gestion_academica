@@ -17,7 +17,9 @@ from apps.reportes.choices import (
     distinct_choices,
     estudiante_labels,
     facultad_choices,
+    facultad_labels,
     profesor_labels,
+    programa_asignatura_labels,
 )
 
 
@@ -67,12 +69,25 @@ class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
                 for homologacion in context["homologaciones"]
             ],
         )
+        facultades = facultad_labels(
+            [homologacion.id_facultad for homologacion in context["homologaciones"]],
+        )
+        asignaturas_destino = programa_asignatura_labels(
+            [
+                homologacion.id_programa_asignatura
+                for homologacion in context["homologaciones"]
+            ],
+        )
         for homologacion in context["homologaciones"]:
             homologacion.estudiante_label = estudiantes.get(
                 homologacion.id_estudiante,
             )
             homologacion.profesor_label = profesores.get(
                 homologacion.id_profesor_evaluador,
+            )
+            homologacion.facultad_label = facultades.get(homologacion.id_facultad)
+            homologacion.asignatura_destino_label = asignaturas_destino.get(
+                homologacion.id_programa_asignatura,
             )
         return context
 
@@ -97,8 +112,16 @@ class HomologacionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
         context["can_write_homologaciones"] = True
         estudiantes = estudiante_labels([self.object.id_estudiante])
         profesores = profesor_labels([self.object.id_profesor_evaluador])
+        facultades = facultad_labels([self.object.id_facultad])
+        asignaturas_destino = programa_asignatura_labels(
+            [self.object.id_programa_asignatura],
+        )
         context["estudiante_label"] = estudiantes.get(self.object.id_estudiante)
         context["profesor_label"] = profesores.get(self.object.id_profesor_evaluador)
+        context["facultad_label"] = facultades.get(self.object.id_facultad)
+        context["asignatura_destino_label"] = asignaturas_destino.get(
+            self.object.id_programa_asignatura,
+        )
         return context
 
 
@@ -220,6 +243,9 @@ class HomologacionAssignEvaluatorView(LoginRequiredMixin, RoleRequiredMixin, For
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["homologacion"] = self.homologacion
+        context["facultad_label"] = facultad_labels(
+            [self.homologacion.id_facultad],
+        ).get(self.homologacion.id_facultad)
         return context
 
 
@@ -259,6 +285,9 @@ class HomologacionEvaluateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["homologacion"] = self.homologacion
+        context["facultad_label"] = facultad_labels(
+            [self.homologacion.id_facultad],
+        ).get(self.homologacion.id_facultad)
         return context
 
 
