@@ -75,18 +75,26 @@
                     {% if condor_show_student or condor_show_teacher %}
                         <span class="condor-nav-title">Academica</span>
                         {% if condor_show_student %}
-                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'academica' %}active{% endif %}" href="{% url 'academica:asignatura_list' %}">
-                                <i class="bi bi-journal-bookmark"></i>
-                                <span>Asignaturas</span>
-                            </a>
                             <a class="condor-nav-link" href="{% url 'academica:plan_estudios_list' %}">
                                 <i class="bi bi-list-check"></i>
                                 <span>Plan de estudios</span>
                             </a>
                             <a class="condor-nav-link" href="{% url 'academica:inscripcion_list' %}">
                                 <i class="bi bi-card-checklist"></i>
-                                <span>Inscripciones</span>
+                                <span>Mis inscripciones</span>
                             </a>
+                            {% if "estudiante" in condor_roles %}
+                                <a class="condor-nav-link" href="{% url 'academica:historial_academico' %}">
+                                    <i class="bi bi-clock-history"></i>
+                                    <span>Historial academico</span>
+                                </a>
+                            {% endif %}
+                            {% if "coordinador" in condor_roles or "decano" in condor_roles or condor_is_superadmin %}
+                                <a class="condor-nav-link" href="{% url 'academica:asignatura_list' %}">
+                                    <i class="bi bi-journal-bookmark"></i>
+                                    <span>Asignaturas de programa</span>
+                                </a>
+                            {% endif %}
                             {% if "coordinador" in condor_roles or condor_is_superadmin %}
                                 <a class="condor-nav-link" href="{% url 'academica:estudiante_list' %}">
                                     <i class="bi bi-mortarboard"></i>

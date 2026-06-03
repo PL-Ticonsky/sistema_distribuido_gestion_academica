@@ -1,45 +1,73 @@
 {% extends "base.html" %}
 
-{% block title %}Planes de estudio{% endblock %}
+{% block title %}Plan de estudios{% endblock %}
+{% block page_title %}Plan de estudios{% endblock %}
 
 {% block content %}
-<h1>Planes de estudio</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Plan de estudios</h1>
+        <p class="mb-0">Materias del programa agrupadas por semestre sugerido.</p>
+    </div>
+</div>
 
-{% regroup plan_asignaturas by programa_academico as planes_por_programa %}
+{% if condor_is_superadmin %}
+    <form class="row g-2 mb-3" method="get">
+        <div class="col-12 col-md-5">
+            <select class="form-select" name="id_programa_academico">
+                {% for value, label in programa_choices %}
+                    <option value="{{ value }}" {% if active_filters.id_programa_academico == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-auto">
+            <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+        </div>
+    </form>
+{% endif %}
 
-{% for programa in planes_por_programa %}
-    <h2>{{ programa.grouper.nombre_programa }}</h2>
-    <p>{{ programa.grouper.facultad.nombre_facultad }}</p>
+{% for programa in programas_plan %}
+    <section class="mb-4">
+        <h2 class="h4 mb-1">{{ programa.nombre_programa }}</h2>
+        <p class="text-muted mb-3">{{ programa.nombre_facultad }}</p>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Semestre</th>
-                <th>Codigo</th>
-                <th>Asignatura</th>
-                <th>Creditos</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for plan in programa.list %}
-                <tr>
-                    <td>{{ plan.semestre_sugerido }}</td>
-                    <td>{{ plan.asignatura.cod_asignatura }}</td>
-                    <td>
-                        <a href="{% url 'academica:asignatura_detail' plan.asignatura.cod_asignatura %}">
-                            {{ plan.asignatura.nombre_asignatura }}
-                        </a>
-                    </td>
-                    <td>{{ plan.asignatura.creditos }}</td>
-                    <td>{{ plan.tipo_asignatura }}</td>
-                    <td>{{ plan.estado }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        {% for semestre in programa.semestres %}
+            <h3 class="h5 mt-3">Semestre {{ semestre.semestre|default:"Sin definir" }}</h3>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Asignatura</th>
+                            <th>Creditos</th>
+                            <th>Tipo</th>
+                            <th>Homologable</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for materia in semestre.materias %}
+                            <tr>
+                                <td>{{ materia.cod_asignatura }}</td>
+                                <td>{{ materia.nombre_asignatura }}</td>
+                                <td>{{ materia.creditos|default:"-" }}</td>
+                                <td>{{ materia.tipo_asignatura|default:"-" }}</td>
+                                <td>{{ materia.homologable|yesno:"Si,No" }}</td>
+                                <td>{{ materia.estado }}</td>
+                                <td>
+                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'academica:plan_asignatura_grupos' materia.id_programa_asignatura %}">
+                                        Ver grupos
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    </section>
 {% empty %}
-    <p>No hay planes de estudio registrados.</p>
+    <p>No hay materias de plan de estudios para tu alcance actual.</p>
 {% endfor %}
 {% endblock %}

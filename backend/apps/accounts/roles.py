@@ -60,6 +60,11 @@ def get_dashboard_options(user):
                 "url": reverse("academica:inscripcion_list"),
             },
             {
+                "title": "Historial academico",
+                "description": "Consultar materias aprobadas, reprobadas o canceladas.",
+                "url": reverse("academica:historial_academico"),
+            },
+            {
                 "title": "Mi plan de estudios",
                 "description": "Revisar asignaturas de mi programa academico.",
                 "url": reverse("academica:plan_estudios_list"),

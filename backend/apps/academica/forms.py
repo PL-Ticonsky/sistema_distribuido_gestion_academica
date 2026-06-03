@@ -2,7 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import connection
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 
 from apps.academica.distributed_write import (
     create_estudiante,
@@ -538,6 +538,7 @@ class InscripcionCreateForm(forms.Form):
         inscripcion=None,
         selected_facultad=None,
         selected_periodo=None,
+        selected_group=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -549,6 +550,7 @@ class InscripcionCreateForm(forms.Form):
         selected_periodo = _selected_value(self.data, "id_periodo_academico") or (
             selected_periodo
         )
+        selected_group = _selected_value(self.data, "id_grupo") or selected_group
         roles = set(get_user_roles(user))
         self.is_student_flow = (
             "estudiante" in roles
@@ -578,6 +580,10 @@ class InscripcionCreateForm(forms.Form):
                     group_queryset,
                     self.student,
                 )
+                if selected_group and self.is_bound:
+                    group_queryset = group_queryset | GrupoDetalle.objects.filter(
+                        id_grupo=selected_group,
+                    )
             for field_name in (
                 "id_estudiante",
                 "intento",
@@ -618,6 +624,9 @@ class InscripcionCreateForm(forms.Form):
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
+        if selected_group:
+            self.fields["id_grupo"].initial = selected_group
+
         if inscripcion is not None:
             self.fields["id_estudiante"].disabled = True
             self.fields["id_grupo"].disabled = True
@@ -634,12 +643,48 @@ class InscripcionCreateForm(forms.Form):
         enrolled_group_ids = InscripcionDetalle.objects.filter(
             id_estudiante=student.id_estudiante,
         ).values_list("id_grupo", flat=True)
+        approved_subject_codes = self._approved_subject_codes(student)
+        active_subject_periods = self._active_subject_periods(student)
+        excluded_groups = set(enrolled_group_ids)
+        if approved_subject_codes:
+            group_queryset = group_queryset.exclude(
+                cod_asignatura__in=approved_subject_codes,
+            )
+        for subject_code, period_id in active_subject_periods:
+            excluded_groups.update(
+                group_queryset.filter(
+                    cod_asignatura=subject_code,
+                    id_periodo_academico=period_id,
+                ).values_list("id_grupo", flat=True),
+            )
         return (
             group_queryset.filter(
                 id_programa_academico=student.id_programa_academico,
                 estado_grupo__in=ACTIVE_GROUP_STATES,
             )
-            .exclude(id_grupo__in=list(enrolled_group_ids))
+            .exclude(id_grupo__in=list(excluded_groups))
+        )
+
+    def _approved_subject_codes(self, student):
+        return set(
+            InscripcionDetalle.objects.filter(
+                Q(estado_inscripcion="Aprobada") | Q(nota_final__gte=3),
+                id_estudiante=student.id_estudiante,
+                id_programa_academico=student.id_programa_academico,
+            )
+            .exclude(cod_asignatura__isnull=True)
+            .values_list("cod_asignatura", flat=True)
+        )
+
+    def _active_subject_periods(self, student):
+        return set(
+            InscripcionDetalle.objects.filter(
+                id_estudiante=student.id_estudiante,
+                estado_inscripcion="Cursando",
+            )
+            .exclude(cod_asignatura__isnull=True)
+            .exclude(id_periodo_academico__isnull=True)
+            .values_list("cod_asignatura", "id_periodo_academico")
         )
 
     def clean(self):
@@ -676,6 +721,20 @@ class InscripcionCreateForm(forms.Form):
                 )
             if group.estado_grupo not in ACTIVE_GROUP_STATES:
                 raise ValidationError("El grupo no esta abierto para inscripciones.")
+            if self._student_approved_subject(student, group):
+                raise ValidationError(
+                    "No puedes inscribir una asignatura que ya aprobaste.",
+                )
+            if self._student_has_active_subject_in_period(student, group):
+                raise ValidationError(
+                    "Ya tienes una inscripcion activa para esta asignatura "
+                    "en el periodo.",
+                )
+            if (
+                group.cupo_maximo is not None
+                and self._group_enrollment_count(group) >= group.cupo_maximo
+            ):
+                raise ValidationError("El grupo no tiene cupos disponibles.")
 
         if student.id_facultad != group.id_facultad:
             raise ValidationError(
@@ -694,6 +753,29 @@ class InscripcionCreateForm(forms.Form):
             raise ValidationError("El estudiante ya esta inscrito en este grupo.")
 
         return cleaned_data
+
+    def _student_approved_subject(self, student, group):
+        return InscripcionDetalle.objects.filter(
+            Q(estado_inscripcion="Aprobada") | Q(nota_final__gte=3),
+            id_estudiante=student.id_estudiante,
+            id_programa_academico=student.id_programa_academico,
+            cod_asignatura=group.cod_asignatura,
+        ).exists()
+
+    def _student_has_active_subject_in_period(self, student, group):
+        return InscripcionDetalle.objects.filter(
+            id_estudiante=student.id_estudiante,
+            cod_asignatura=group.cod_asignatura,
+            id_periodo_academico=group.id_periodo_academico,
+            estado_inscripcion="Cursando",
+        ).exists()
+
+    def _group_enrollment_count(self, group):
+        return (
+            InscripcionDetalle.objects.filter(id_grupo=group.id_grupo)
+            .exclude(estado_inscripcion="Cancelada")
+            .count()
+        )
 
     def save(self):
         student = self.student or self.cleaned_data["id_estudiante"]

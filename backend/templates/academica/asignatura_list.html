@@ -25,26 +25,34 @@
             <th>Codigo</th>
             <th>Nombre</th>
             <th>Creditos</th>
-            <th>Horas teoria</th>
-            <th>Horas practica</th>
+            <th>Programa</th>
+            <th>Semestre</th>
+            <th>Tipo</th>
             <th>Estado</th>
             <th>Homologable</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
-        {% for asignatura in asignaturas %}
+        {% for asignatura in asignaturas_programa %}
             <tr>
                 <td>{{ asignatura.cod_asignatura }}</td>
                 <td>{{ asignatura.nombre_asignatura }}</td>
-                <td>{{ asignatura.creditos }}</td>
-                <td>{{ asignatura.horas_teoria }}</td>
-                <td>{{ asignatura.horas_pract }}</td>
+                <td>{{ asignatura.creditos|default:"-" }}</td>
+                <td>{{ asignatura.nombre_programa|default:"-" }}</td>
+                <td>{{ asignatura.semestre_sugerido|default:"-" }}</td>
+                <td>{{ asignatura.tipo_asignatura|default:"-" }}</td>
                 <td>{{ asignatura.estado }}</td>
                 <td>{{ asignatura.homologable|yesno:"Si,No" }}</td>
+                <td>
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'academica:plan_asignatura_grupos' asignatura.id_programa_asignatura %}">
+                        Ver grupos
+                    </a>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7">No hay asignaturas registradas.</td>
+                <td colspan="9">No hay asignaturas registradas para tu alcance.</td>
             </tr>
         {% endfor %}
     </tbody>

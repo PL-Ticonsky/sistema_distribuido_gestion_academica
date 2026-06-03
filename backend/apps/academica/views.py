@@ -1,7 +1,10 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import connection
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, TemplateView, View
@@ -38,7 +41,6 @@ from apps.accounts.access_context import (
     get_access_context,
 )
 from apps.auditoria.services import registrar_auditoria
-from apps.estructura.models import Asignatura
 from apps.reportes.choices import (
     distinct_choices,
     facultad_choices,
@@ -61,6 +63,7 @@ READ_ONLY_MESSAGE = (
     "Esta pantalla es de consulta consolidada; usa las acciones disponibles del modulo."
 )
 CURRENT_ENROLLMENT_STATES = {"Cursando"}
+HISTORY_ENROLLMENT_STATES = {"Aprobada", "Reprobada", "Cancelada", "Finalizada"}
 
 
 def _subject_codes_for_user(user):
@@ -80,6 +83,142 @@ def _subject_codes_for_user(user):
             [list(context.program_ids)],
         )
         return [row[0] for row in cursor.fetchall()]
+
+
+def _program_ids_for_request(request):
+    user = request.user
+    context = get_access_context(user)
+    if context.is_superadmin:
+        selected_program = request.GET.get("id_programa_academico")
+        return [selected_program] if selected_program else None
+    return list(context.program_ids)
+
+
+def _current_period_ids():
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select id_periodo_academico
+            from institucional.periodo_academico
+            where estado = 'Activo'
+            order by fecha_inicio desc, id_periodo_academico
+            """
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+
+def _fetch_program_subject_rows(program_ids=None, status=None):
+    where = []
+    params = []
+    if program_ids is not None:
+        if not program_ids:
+            return []
+        where.append("pa.id_programa_academico = any(%s)")
+        params.append(program_ids)
+    if status:
+        where.append("pa.estado = %s")
+        params.append(status)
+    where_sql = f"where {' and '.join(where)}" if where else ""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            select
+                pa.id_programa_asignatura,
+                pa.id_facultad,
+                coalesce(f.nombre_facultad, pa.id_facultad) as nombre_facultad,
+                pa.id_programa_academico,
+                coalesce(p.nombre_programa, pa.id_programa_academico)
+                    as nombre_programa,
+                pa.cod_asignatura,
+                coalesce(a.nombre_asignatura, pa.cod_asignatura)
+                    as nombre_asignatura,
+                a.creditos,
+                a.horas_teoria,
+                a.horas_pract,
+                a.homologable,
+                pa.semestre_sugerido,
+                pa.tipo_asignatura,
+                pa.estado
+            from reportes.vw_programa_asignatura_global pa
+            left join institucional.facultad f
+              on f.id_facultad = pa.id_facultad
+            left join institucional.programa_academico p
+              on p.id_programa_academico = pa.id_programa_academico
+            left join institucional.asignatura a
+              on a.cod_asignatura = pa.cod_asignatura
+            {where_sql}
+            order by nombre_programa, pa.semestre_sugerido,
+                     nombre_asignatura, pa.cod_asignatura
+            """,
+            params,
+        )
+        columns = [column[0] for column in cursor.description]
+        return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
+
+
+def _group_count_by_group(group_ids):
+    if not group_ids:
+        return {}
+    rows = (
+        InscripcionDetalle.objects.filter(id_grupo__in=group_ids)
+        .exclude(estado_inscripcion="Cancelada")
+        .values("id_grupo")
+        .annotate(total=Count("id_inscripcion"))
+    )
+    return {row["id_grupo"]: row["total"] for row in rows}
+
+
+def _attach_group_counts(groups):
+    counts = _group_count_by_group([group.id_grupo for group in groups])
+    for group in groups:
+        group.inscritos_actuales = counts.get(group.id_grupo, 0)
+    return groups
+
+
+def _group_rows(rows, key):
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[row[key]].append(row)
+    return grouped.items()
+
+
+def _student_can_request_group(user, group):
+    context = get_access_context(user)
+    if "estudiante" not in context.roles or not context.student_ids:
+        return False
+    if group.estado_grupo not in {"Abierto", "En curso"}:
+        return False
+    if group.id_programa_academico not in context.program_ids:
+        return False
+    student_ids = list(context.student_ids)
+    approved = InscripcionDetalle.objects.filter(
+        Q(estado_inscripcion="Aprobada") | Q(nota_final__gte=3),
+        id_estudiante__in=student_ids,
+        id_programa_academico=group.id_programa_academico,
+        cod_asignatura=group.cod_asignatura,
+    ).exists()
+    if approved:
+        return False
+    active_same_period = InscripcionDetalle.objects.filter(
+        id_estudiante__in=student_ids,
+        cod_asignatura=group.cod_asignatura,
+        id_periodo_academico=group.id_periodo_academico,
+        estado_inscripcion="Cursando",
+    ).exists()
+    if active_same_period:
+        return False
+    duplicate = InscripcionDetalle.objects.filter(
+        id_estudiante__in=student_ids,
+        id_grupo=group.id_grupo,
+    ).exists()
+    if duplicate:
+        return False
+    if (
+        group.cupo_maximo is not None
+        and getattr(group, "inscritos_actuales", 0) >= group.cupo_maximo
+    ):
+        return False
+    return True
 
 
 class AcademicReportListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -105,24 +244,67 @@ class AcademicReportListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         return context
 
 
-class AsignaturaListView(AcademicReportListView):
+class AsignaturaListView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     allowed_roles = ACADEMIC_READ_ROLES
-    model = Asignatura
     template_name = "academica/asignatura_list.html"
-    context_object_name = "asignaturas"
-    filters = ("estado",)
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        subject_codes = _subject_codes_for_user(self.request.user)
-        if subject_codes is not None:
-            queryset = queryset.filter(cod_asignatura__in=subject_codes)
-        return queryset
+    def get_program_ids(self):
+        return _program_ids_for_request(self.request)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["estado_choices"] = distinct_choices(Asignatura, "estado", "Todos")
+        status = self.request.GET.get("estado", "Activa")
+        status_filter = status or None
         context["list_title"] = getattr(self, "list_title", "Asignaturas")
+        context["asignaturas_programa"] = _fetch_program_subject_rows(
+            self.get_program_ids(),
+            status=status_filter,
+        )
+        context["estado_choices"] = [
+            ("", "Todos"),
+            ("Activa", "Activa"),
+            ("Inactiva", "Inactiva"),
+        ]
+        context["active_filters"] = {
+            "estado": status,
+            "id_programa_academico": self.request.GET.get("id_programa_academico", ""),
+        }
+        context["programa_choices"] = programa_choices()
+        return context
+
+
+class PlanEstudiosListView(AsignaturaListView):
+    template_name = "academica/plan_estudios_list.html"
+    list_title = "Plan de estudios"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        rows = context["asignaturas_programa"]
+        programs = []
+        for program_key, program_rows in _group_rows(rows, "id_programa_academico"):
+            program_rows = list(program_rows)
+            semesters = []
+            for semester_key, semester_rows in _group_rows(
+                program_rows,
+                "semestre_sugerido",
+            ):
+                semesters.append(
+                    {
+                        "semestre": semester_key,
+                        "materias": list(semester_rows),
+                    }
+                )
+            first_row = program_rows[0]
+            programs.append(
+                {
+                    "id_programa_academico": program_key,
+                    "nombre_programa": first_row["nombre_programa"],
+                    "id_facultad": first_row["id_facultad"],
+                    "nombre_facultad": first_row["nombre_facultad"],
+                    "semestres": semesters,
+                }
+            )
+        context["programas_plan"] = programs
         return context
 
 
@@ -340,18 +522,113 @@ class GrupoListView(AcademicReportListView):
 
 
 class GrupoDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
-    allowed_roles = (*TEACHING_ROLES, "administrativo")
+    allowed_roles = ACADEMIC_READ_ROLES
     model = GrupoDetalle
     template_name = "academica/grupo_detail.html"
     context_object_name = "grupo"
     pk_url_kwarg = "id_grupo"
 
     def get_queryset(self):
+        context = get_access_context(self.request.user)
+        student_only = (
+            "estudiante" in context.roles
+            and not context.roles.intersection({"coordinador", "decano", "superadmin"})
+        )
+        if student_only:
+            return super().get_queryset().filter(
+                id_programa_academico__in=context.program_ids,
+            )
         return filter_grupos_for_user(super().get_queryset(), self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_create_groups"] = user_can_create_groups(self.request.user)
+        inscritos = list(
+            filter_inscripciones_for_user(
+                InscripcionDetalle.objects.filter(id_grupo=self.object.id_grupo),
+                self.request.user,
+            ).order_by("estudiante", "id_inscripcion")
+        )
+        can_view_group_notes = self._can_view_group_notes()
+        student_ids = get_access_context(self.request.user).student_ids
+        for inscripcion in inscritos:
+            inscripcion.can_view_note = can_view_group_notes or (
+                inscripcion.id_estudiante in student_ids
+            )
+        context["inscripciones_grupo"] = inscritos
+        context["can_view_group_notes"] = can_view_group_notes
+        return context
+
+    def _can_view_group_notes(self):
+        context = get_access_context(self.request.user)
+        if context.is_superadmin:
+            return True
+        if (
+            "docente" in context.roles
+            and self.object.id_profesor in context.professor_ids
+        ):
+            return True
+        if (
+            "coordinador" in context.roles
+            and self.object.id_programa_academico in context.coordinated_program_ids
+        ):
+            return True
+        return (
+            "decano" in context.roles
+            and self.object.id_facultad in context.dean_faculty_ids
+        )
+
+
+class GruposAsignaturaListView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = ACADEMIC_READ_ROLES
+    template_name = "academica/grupos_asignatura_list.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.plan_row = self._get_plan_row()
+        if self.plan_row is None:
+            raise PermissionDenied("La asignatura esta fuera de tu alcance.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def _get_plan_row(self):
+        program_ids = _program_ids_for_request(self.request)
+        rows = _fetch_program_subject_rows(program_ids, status="Activa")
+        id_programa_asignatura = str(self.kwargs.get("id_programa_asignatura", ""))
+        cod_asignatura = self.kwargs.get("cod_asignatura")
+        for row in rows:
+            if id_programa_asignatura and str(row["id_programa_asignatura"]) == (
+                id_programa_asignatura
+            ):
+                return row
+            if cod_asignatura and row["cod_asignatura"] == cod_asignatura:
+                return row
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        queryset = GrupoDetalle.objects.filter(
+            id_programa_asignatura=self.plan_row["id_programa_asignatura"],
+        ).exclude(estado_grupo__in=["Cancelado", "Finalizado"])
+        current_period_ids = _current_period_ids()
+        if current_period_ids:
+            queryset = queryset.filter(id_periodo_academico__in=current_period_ids)
+        context_access = get_access_context(self.request.user)
+        student_only = (
+            "estudiante" in context_access.roles
+            and not context_access.roles.intersection(
+                {"coordinador", "decano", "superadmin"},
+            )
+        )
+        if not student_only:
+            queryset = filter_grupos_for_user(queryset, self.request.user)
+        grupos = _attach_group_counts(list(queryset))
+        for grupo in grupos:
+            grupo.can_request_enrollment = _student_can_request_group(
+                self.request.user,
+                grupo,
+            )
+        context["plan"] = self.plan_row
+        context["grupos"] = grupos
+        context["current_period_ids"] = current_period_ids
         return context
 
 
@@ -505,8 +782,10 @@ class InscripcionListView(AcademicReportListView):
             context["history_inscripciones"] = [
                 item
                 for item in object_list
-                if item.estado_inscripcion not in CURRENT_ENROLLMENT_STATES
+                if item.estado_inscripcion in HISTORY_ENROLLMENT_STATES
+                or item.estado_inscripcion not in CURRENT_ENROLLMENT_STATES
             ]
+        context["history_page"] = getattr(self, "history_page", False)
         context["facultad_choices"] = facultad_choices()
         context["programa_choices"] = programa_choices(
             self.request.GET.get("id_facultad"),
@@ -518,6 +797,14 @@ class InscripcionListView(AcademicReportListView):
             "Todos los estados",
         )
         return context
+
+
+class HistorialAcademicoView(InscripcionListView):
+    history_page = True
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.exclude(estado_inscripcion__in=CURRENT_ENROLLMENT_STATES)
 
 
 class InscripcionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -557,6 +844,7 @@ class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         kwargs["user"] = self.request.user
         kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
         kwargs["selected_periodo"] = self.request.GET.get("id_periodo_academico")
+        kwargs["selected_group"] = self.request.GET.get("id_grupo")
         return kwargs
 
     def form_valid(self, form):
@@ -701,10 +989,6 @@ class AsignaturaDetailView(ReadOnlyRedirectView):
 
 class ProfesorDetailView(ReadOnlyRedirectView):
     redirect_url_name = "academica:profesor_list"
-
-
-class PlanEstudiosListView(AsignaturaListView):
-    list_title = "Plan de estudios"
 
 
 class PreRequisitoListView(ReadOnlyRedirectView):

@@ -10,7 +10,11 @@ Password demo usada en todos los casos: `Demo12345*`.
 | `estudiante1.fing@universidad.edu` | estudiante | `/homologaciones/` | Solo homologaciones propias | 0 homologaciones propias en los datos actuales |
 | `estudiante1.fing@universidad.edu` | estudiante | Detalle de inscripcion ajena | 403 o 404 | 404 |
 | `estudiante1.fing@universidad.edu` | estudiante | `/academica/planes/` | Solo asignaturas del programa propio | 200 |
+| `estudiante1.fing@universidad.edu` | estudiante | `/academica/plan-estudios/` | Plan agrupado por semestre sugerido | 200; muestra semestres |
+| `estudiante1.fing@universidad.edu` | estudiante | `/academica/mi-historial/` | Historial separado de cursos actuales | 200 |
+| `estudiante1.fing@universidad.edu` | estudiante | `/estructura/asignaturas/` | No exponer catalogo institucional global | 302 a dashboard |
 | `estudiante1.fing@universidad.edu` | estudiante | `/academica/inscripciones/crear/` | Estudiante fijo, sin notas ni estado manual | 200; campos sensibles ocultos |
+| `estudiante1.fing@universidad.edu` | estudiante | POST manual de asignatura ya aprobada | Error de validacion y sin escritura | Pendiente de revalidacion DB por bloqueo de permisos del entorno |
 | `estudiante1.fing@universidad.edu` | estudiante | Edicion directa de inscripcion propia | 403 o 404 | 403 |
 | `estudiante1.fing@universidad.edu` | estudiante | `/homologaciones/crear/` | Sin selector de evaluador | 200; evaluador oculto |
 | `docente.puro.fing@universidad.edu` | docente | Login demo | Autenticacion correcta y grupo docente unico | OK; grupos `docente` |
@@ -23,13 +27,19 @@ Password demo usada en todos los casos: `Demo12345*`.
 | `docente1.fart@universidad.edu` | docente, decano | Estudiante de otra facultad | 403 o 404 | 404 |
 | `admin.fart@universidad.edu` | administrativo | `/financiera/matriculas/` y `/financiera/recibos/` | Solo `FART` | Solo `FART` |
 | `admin.fing@universidad.edu` | administrativo, superadmin | Estudiantes y matriculas | Vista global | 30 estudiantes y 50 matriculas |
+| `admin.fing@universidad.edu` | administrativo, superadmin | `/auditoria/` | Filas con enlace a detalle | 200; boton `Ver detalle` |
+| `admin.fing@universidad.edu` | administrativo, superadmin | `/auditoria/<id>/` | Detalle completo de auditoria | Ruta existente con usuario, accion, fecha, esquema, tabla, descripcion e ID |
 
 ## Rutas protegidas con filtros de backend
 
 - `/academica/estudiantes/`
 - `/academica/grupos/`
 - `/academica/inscripciones/`
+- `/academica/plan-estudios/`
+- `/academica/mi-historial/`
+- `/academica/plan-estudios/<id_programa_asignatura>/grupos/`
 - `/homologaciones/`
+- `/auditoria/`
 - `/financiera/tarifas/`
 - `/financiera/recibos/`
 - `/financiera/matriculas/`

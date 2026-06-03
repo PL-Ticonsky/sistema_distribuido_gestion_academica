@@ -40,16 +40,32 @@ La aplicacion centraliza el alcance en `apps.accounts.access_context`:
 ## Reglas de interfaz y backend
 
 - El plan de estudios y las asignaturas se filtran por los programas visibles
-  del usuario; un estudiante ve solo asignaturas de su carrera/programa.
+  del usuario; un estudiante ve solo asignaturas de su carrera/programa. La
+  ruta academica `/academica/plan-estudios/` agrupa materias por
+  `semestre_sugerido`.
+- La ruta institucional `/estructura/asignaturas/` se conserva como catalogo
+  global de estructura para roles de gestion; no es la vista principal del
+  estudiante.
+- Cada materia del plan enlaza a grupos ofertados del periodo activo mediante
+  `/academica/plan-estudios/<id_programa_asignatura>/grupos/`.
 - El formulario de inscripcion para estudiantes fija el estudiante actual,
   oculta notas, intento y estado, y muestra solo grupos disponibles de su
   programa. La edicion directa de una inscripcion por estudiante retorna 403.
+- El backend bloquea inscripciones a asignaturas ya aprobadas, duplicados al
+  mismo grupo y dos grupos de la misma asignatura en el mismo periodo activo.
 - La cancelacion de inscripcion requiere confirmacion y solo se ofrece para
   inscripciones propias en estado `Cursando`.
+- `/academica/inscripciones/` separa cursos actuales e historial para
+  estudiantes; `/academica/mi-historial/` muestra solo historial academico.
+- El detalle de grupo muestra datos del grupo e inscritos. La nota final se
+  muestra a superadmin, docente del grupo, coordinador del programa, decano de
+  la facultad y al estudiante solo para su propia fila.
 - El formulario de homologacion para estudiantes no muestra evaluador ni estado;
   la solicitud entra como `Solicitada` y el backend toma un evaluador disponible
   de la facultad o bloquea si no existe.
 - La asignacion de evaluador queda para coordinador, decano y superadmin; la
   evaluacion queda para docente, coordinador, decano y superadmin.
+- Auditoria lista la accion realizada y enlaza cada fila a un detalle completo
+  con usuario, fecha, esquema, tabla, descripcion e ID tecnico.
 - Usuario de prueba docente puro: `docente.puro.fing@universidad.edu`, grupo
   funcional `docente` solamente, registro academico en FING.

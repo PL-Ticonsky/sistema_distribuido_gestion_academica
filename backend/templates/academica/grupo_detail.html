@@ -40,4 +40,40 @@
     <dt class="col-sm-3">Estado</dt>
     <dd class="col-sm-9">{{ grupo.estado_grupo|default:"-" }}</dd>
 </dl>
+
+<h2 class="h4 mt-4">Estudiantes inscritos</h2>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Estudiante</th>
+                <th>Correo</th>
+                <th>Estado</th>
+                <th>Nota final</th>
+                <th>Intento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inscripcion in inscripciones_grupo %}
+                <tr>
+                    <td>{{ inscripcion.estudiante|default:inscripcion.id_estudiante }}</td>
+                    <td>{{ inscripcion.correo|default:"-" }}</td>
+                    <td>{{ inscripcion.estado_inscripcion|default:"-" }}</td>
+                    <td>
+                        {% if inscripcion.can_view_note %}
+                            {{ inscripcion.nota_final|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ inscripcion.intento|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">No hay estudiantes inscritos en este grupo.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
