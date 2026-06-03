@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Panel institucional{% endblock %}
 {% block page_title %}Panel institucional{% endblock %}
 
 {% block content %}
 <section class="condor-dashboard-hero">
+    <img class="condor-dashboard-watermark" src="{% static 'img/brand/condor-caido-bg.png' %}" alt="" aria-hidden="true">
     <div>
         <span class="condor-section-kicker">Cóndor Caído</span>
         <h1>Hola, {{ request.user.nombre|default:request.user.correo }}</h1>
@@ -14,7 +16,9 @@
         </p>
     </div>
     <div class="condor-dashboard-identity">
-        <span class="condor-avatar">{{ request.user.nombre|default:request.user.correo|first|upper }}</span>
+        <span class="condor-avatar" aria-hidden="true">
+            <img src="{% static 'img/brand/condor-avatar.png' %}" alt="">
+        </span>
         <div>
             <strong>{{ request.user.correo }}</strong>
             <span>{{ request.user.is_active|yesno:"Cuenta activa,Cuenta inactiva" }}</span>
@@ -82,9 +86,9 @@
 </div>
 
 {% if dashboard_options %}
-    <div class="row g-3">
+    <div class="row g-2 g-xl-3">
         {% for option in dashboard_options %}
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
                 <a class="condor-action-card" href="{{ option.url }}">
                     <span class="condor-action-icon mb-3">
                         <i class="bi bi-compass"></i>

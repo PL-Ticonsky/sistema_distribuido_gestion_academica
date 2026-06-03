@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Ingreso institucional{% endblock %}
 
@@ -6,12 +7,18 @@
 <section class="condor-login-shell" aria-labelledby="login-title">
     <div class="condor-login-panel condor-login-intro">
         <div class="condor-auth-brand">
-            <span class="condor-brand-mark">CC</span>
+            <span class="condor-brand-mark condor-brand-mark-image">
+                <img src="{% static 'img/brand/condor-caido-mark.png' %}" alt="" aria-hidden="true">
+            </span>
             <div>
                 <h1 id="login-title">Cóndor Caído</h1>
                 <p>Sistema de Gestión Académica</p>
             </div>
         </div>
+
+        <figure class="condor-login-hero-image">
+            <img src="{% static 'img/brand/condor-caido-login.png' %}" alt="Ilustración institucional de un cóndor en descenso">
+        </figure>
 
         <div class="condor-login-copy">
             <span class="condor-role-pill">Acceso institucional</span>
@@ -23,21 +30,21 @@
         </div>
 
         <div class="condor-help-grid" aria-label="Servicios institucionales">
-            <a href="#" aria-label="Recuperación de contraseña">
+            <a href="#" aria-label="Recuperar contraseña">
                 <i class="bi bi-key"></i>
-                <span>Recuperación de contraseña</span>
+                <span>Recuperar contraseña</span>
             </a>
-            <a href="#" aria-label="Manuales y ayuda">
+            <a href="#" aria-label="Manual de usuario">
                 <i class="bi bi-book"></i>
-                <span>Manuales y ayuda</span>
+                <span>Manual de usuario</span>
             </a>
             <a href="#" aria-label="Calendario académico">
                 <i class="bi bi-calendar3"></i>
                 <span>Calendario académico</span>
             </a>
-            <a href="#" aria-label="Derechos pecuniarios">
-                <i class="bi bi-cash-stack"></i>
-                <span>Derechos pecuniarios</span>
+            <a href="#" aria-label="Soporte académico">
+                <i class="bi bi-headset"></i>
+                <span>Soporte académico</span>
             </a>
         </div>
     </div>

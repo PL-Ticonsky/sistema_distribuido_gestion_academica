@@ -278,7 +278,14 @@ class PlanEstudiosListView(AsignaturaListView):
     list_title = "Plan de estudios"
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = TemplateView.get_context_data(self, **kwargs)
+        rows = _fetch_program_subject_rows(self.get_program_ids())
+        context["list_title"] = self.list_title
+        context["asignaturas_programa"] = rows
+        context["programa_choices"] = programa_choices()
+        context["active_filters"] = {
+            "id_programa_academico": self.request.GET.get("id_programa_academico", ""),
+        }
         rows = context["asignaturas_programa"]
         programs = []
         for program_key, program_rows in _group_rows(rows, "id_programa_academico"):
@@ -295,12 +302,23 @@ class PlanEstudiosListView(AsignaturaListView):
                     }
                 )
             first_row = program_rows[0]
+            total_credits = sum(row["creditos"] or 0 for row in program_rows)
+            semester_count = len(
+                {
+                    row["semestre_sugerido"]
+                    for row in program_rows
+                    if row["semestre_sugerido"] is not None
+                },
+            )
             programs.append(
                 {
                     "id_programa_academico": program_key,
                     "nombre_programa": first_row["nombre_programa"],
                     "id_facultad": first_row["id_facultad"],
                     "nombre_facultad": first_row["nombre_facultad"],
+                    "total_materias": len(program_rows),
+                    "total_creditos": total_credits,
+                    "total_semestres": semester_count,
                     "semestres": semesters,
                 }
             )
