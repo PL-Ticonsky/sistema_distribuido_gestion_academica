@@ -36,6 +36,11 @@ def _inscripcion_table(id_facultad):
     return f'"{schema}"."inscripcion"'
 
 
+def _homologacion_table(id_facultad):
+    schema = get_fdw_schema_for_facultad(id_facultad)
+    return f'"{schema}"."homologacion"'
+
+
 def get_facultad_for_grupo(id_grupo):
     with connection.cursor() as cursor:
         cursor.execute(
@@ -49,6 +54,23 @@ def get_facultad_for_grupo(id_grupo):
         row = cursor.fetchone()
     if row is None:
         raise ValidationError("No se encontro el grupo seleccionado.")
+    get_fdw_schema_for_facultad(row[0])
+    return row[0]
+
+
+def get_facultad_for_estudiante(id_estudiante):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select id_facultad
+            from reportes.vw_estudiantes_detalle
+            where id_estudiante = %s
+            """,
+            [id_estudiante],
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise ValidationError("No se encontro el estudiante seleccionado.")
     get_fdw_schema_for_facultad(row[0])
     return row[0]
 
@@ -334,5 +356,174 @@ def cancel_inscripcion(*, id_inscripcion, id_facultad):
               and id_facultad = %s
             """,
             ["Cancelada", id_inscripcion, id_facultad],
+        )
+        return cursor.rowcount
+
+
+def create_homologacion(
+    *,
+    id_profesor_evaluador,
+    id_estudiante,
+    asignatura_origen,
+    institucion_origen,
+    id_programa_asignatura,
+    fecha_solicitud,
+    estado_homologacion,
+):
+    id_homologacion = uuid.uuid4()
+    id_facultad = get_facultad_for_estudiante(id_estudiante)
+    table = _homologacion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            insert into {table} (
+                id_homologacion,
+                id_facultad,
+                id_profesor_evaluador,
+                id_estudiante,
+                asignatura_origen,
+                institucion_origen,
+                id_programa_asignatura,
+                fecha_solicitud,
+                estado_homologacion
+            )
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                id_homologacion,
+                id_facultad,
+                id_profesor_evaluador,
+                id_estudiante,
+                asignatura_origen,
+                institucion_origen,
+                id_programa_asignatura,
+                fecha_solicitud,
+                estado_homologacion,
+            ],
+        )
+    return id_homologacion
+
+
+def update_homologacion(
+    *,
+    id_homologacion,
+    id_facultad,
+    id_profesor_evaluador,
+    id_estudiante,
+    asignatura_origen,
+    institucion_origen,
+    id_programa_asignatura,
+    fecha_solicitud,
+    estado_homologacion,
+    observacion,
+    fecha_respuesta,
+    nota_obtenida,
+):
+    table = _homologacion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set id_profesor_evaluador = %s,
+                id_estudiante = %s,
+                asignatura_origen = %s,
+                institucion_origen = %s,
+                id_programa_asignatura = %s,
+                fecha_solicitud = %s,
+                estado_homologacion = %s,
+                observacion = %s,
+                fecha_respuesta = %s,
+                nota_obtenida = %s
+            where id_homologacion = %s
+              and id_facultad = %s
+            """,
+            [
+                id_profesor_evaluador,
+                id_estudiante,
+                asignatura_origen,
+                institucion_origen,
+                id_programa_asignatura,
+                fecha_solicitud,
+                estado_homologacion,
+                observacion,
+                fecha_respuesta,
+                nota_obtenida,
+                id_homologacion,
+                id_facultad,
+            ],
+        )
+        return cursor.rowcount
+
+
+def asignar_evaluador_homologacion(
+    *,
+    id_homologacion,
+    id_facultad,
+    id_profesor_evaluador,
+):
+    table = _homologacion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set id_profesor_evaluador = %s,
+                estado_homologacion = %s
+            where id_homologacion = %s
+              and id_facultad = %s
+            """,
+            [
+                id_profesor_evaluador,
+                "En revision",
+                id_homologacion,
+                id_facultad,
+            ],
+        )
+        return cursor.rowcount
+
+
+def evaluar_homologacion(
+    *,
+    id_homologacion,
+    id_facultad,
+    estado_homologacion,
+    observacion,
+    fecha_respuesta,
+    nota_obtenida,
+):
+    table = _homologacion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set estado_homologacion = %s,
+                observacion = %s,
+                fecha_respuesta = %s,
+                nota_obtenida = %s
+            where id_homologacion = %s
+              and id_facultad = %s
+            """,
+            [
+                estado_homologacion,
+                observacion,
+                fecha_respuesta,
+                nota_obtenida,
+                id_homologacion,
+                id_facultad,
+            ],
+        )
+        return cursor.rowcount
+
+
+def cancel_homologacion(*, id_homologacion, id_facultad):
+    table = _homologacion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set estado_homologacion = %s
+            where id_homologacion = %s
+              and id_facultad = %s
+            """,
+            ["Cancelada", id_homologacion, id_facultad],
         )
         return cursor.rowcount

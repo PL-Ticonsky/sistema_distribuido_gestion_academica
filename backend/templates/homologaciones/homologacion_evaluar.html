@@ -1,9 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Homologaciones{% endblock %}
+{% block title %}Evaluar homologacion{% endblock %}
 
 {% block content %}
-<h1>Homologaciones</h1>
-<p>La evaluacion de homologaciones aun no esta habilitada en la arquitectura distribuida.</p>
-<p><a href="{% url 'homologaciones:homologacion_list' %}">Volver a homologaciones</a></p>
+<p><a href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">Volver al detalle</a></p>
+
+<h1>Evaluar homologacion</h1>
+
+<p class="text-muted">
+    {{ homologacion.asignatura_origen|default:"Homologacion" }} -
+    {{ homologacion.institucion_origen|default:"Sin institucion" }}
+</p>
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+        {% for field in form %}
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">Guardar evaluacion</button>
+        <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
+            Cancelar
+        </a>
+    </div>
+</form>
 {% endblock %}

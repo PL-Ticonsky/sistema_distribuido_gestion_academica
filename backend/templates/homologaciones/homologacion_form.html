@@ -1,9 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Homologaciones{% endblock %}
+{% block title %}{{ form_title|default:"Homologacion" }}{% endblock %}
 
 {% block content %}
-<h1>Homologaciones</h1>
-<p>La escritura de homologaciones distribuida aun no esta habilitada.</p>
 <p><a href="{% url 'homologaciones:homologacion_list' %}">Volver a homologaciones</a></p>
+
+<div class="mb-3">
+    <h1 class="mb-1">{{ form_title|default:"Homologacion" }}</h1>
+    <p class="mb-0">
+        La lectura se confirma desde reportes.vw_homologaciones_global y la escritura se envia al esquema FDW derivado del estudiante.
+    </p>
+</div>
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+        {% for field in form %}
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-save"></i>
+            {{ submit_label|default:"Guardar homologacion" }}
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_list' %}">
+            Cancelar
+        </a>
+    </div>
+</form>
 {% endblock %}

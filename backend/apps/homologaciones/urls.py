@@ -9,6 +9,7 @@ from apps.homologaciones.views import (
     HomologacionListView,
     HomologacionPendientesListView,
     HomologacionSolicitudesListView,
+    HomologacionUpdateView,
 )
 
 app_name = "homologaciones"
@@ -30,6 +31,11 @@ urlpatterns = [
         "<uuid:id_homologacion>/",
         HomologacionDetailView.as_view(),
         name="homologacion_detail",
+    ),
+    path(
+        "<uuid:id_homologacion>/editar/",
+        HomologacionUpdateView.as_view(),
+        name="homologacion_update",
     ),
     path(
         "<uuid:id_homologacion>/asignar-evaluador/",

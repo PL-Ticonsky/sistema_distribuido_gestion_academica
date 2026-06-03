@@ -7,6 +7,22 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0">Detalle de homologacion</h1>
+    {% if can_write_homologaciones %}
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_update' homologacion.id_homologacion %}">
+                Editar
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
+                Asignar evaluador
+            </a>
+            <a class="btn btn-outline-success" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
+                Evaluar
+            </a>
+            <a class="btn btn-outline-danger" href="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
+                Cancelar
+            </a>
+        </div>
+    {% endif %}
 </div>
 
 <dl class="row">
@@ -34,5 +50,7 @@
     <dd>{{ homologacion.nota_obtenida|default:"-" }}</dd>
     <dt>Observacion</dt>
     <dd>{{ homologacion.observacion|default:"-" }}</dd>
+    <dt>ID homologacion</dt>
+    <dd>{{ homologacion.id_homologacion }}</dd>
 </dl>
 {% endblock %}
