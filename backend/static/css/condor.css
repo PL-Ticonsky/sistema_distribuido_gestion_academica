@@ -1,26 +1,33 @@
 :root {
-    --condor-bg: #f7f1e8;
-    --condor-bg-deep: #efe3d2;
-    --condor-surface: #fffaf2;
+    --condor-red: #8f1723;
+    --condor-red-dark: #5f0d16;
+    --condor-gold: #c49a2d;
+    --condor-cream: #fff8e8;
+    --condor-bg: #f4f1eb;
+    --condor-panel: #ffffff;
+    --condor-border: #ded6c8;
+    --condor-text: #252525;
+    --condor-muted: #6a6258;
+    --condor-success: #2f6f4e;
+    --condor-warning: #9a650d;
+    --condor-danger: #9b2737;
+    --condor-bg-deep: #e9e2d7;
+    --condor-surface: var(--condor-panel);
     --condor-surface-strong: #fffdf8;
-    --condor-sidebar: #e8dcc8;
-    --condor-sidebar-deep: #d8c5aa;
-    --condor-accent: #b08968;
-    --condor-accent-dark: #7f5539;
-    --condor-accent-soft: #efe0ce;
-    --condor-ink: #2f2a24;
-    --condor-ink-soft: #50463c;
-    --condor-muted: #6f6256;
-    --condor-line: #dfcfba;
-    --condor-line-soft: #eee2d2;
-    --condor-success: #4f7d5a;
-    --condor-warning: #a66b20;
-    --condor-danger: #a64f3d;
-    --condor-info: #6c6a4e;
-    --condor-radius: 1rem;
-    --condor-radius-sm: 0.68rem;
-    --condor-shadow: 0 24px 60px rgba(83, 61, 42, 0.14);
-    --condor-shadow-soft: 0 14px 34px rgba(83, 61, 42, 0.1);
+    --condor-sidebar: #f8f3e7;
+    --condor-sidebar-deep: #ead9b5;
+    --condor-accent: var(--condor-gold);
+    --condor-accent-dark: var(--condor-red);
+    --condor-accent-soft: #f5e9c8;
+    --condor-ink: var(--condor-text);
+    --condor-ink-soft: #3e3a35;
+    --condor-line: var(--condor-border);
+    --condor-line-soft: #ebe5dc;
+    --condor-info: #345a7a;
+    --condor-radius: 0.5rem;
+    --condor-radius-sm: 0.38rem;
+    --condor-shadow: 0 18px 42px rgba(52, 39, 31, 0.12);
+    --condor-shadow-soft: 0 10px 24px rgba(52, 39, 31, 0.08);
     --condor-sidebar-width: 294px;
     --condor-sidebar-collapsed: 88px;
 }
@@ -42,8 +49,8 @@ body {
     min-height: 100vh;
     margin: 0;
     background:
-        linear-gradient(135deg, rgba(176, 137, 104, 0.16), transparent 34rem),
-        linear-gradient(180deg, #fbf6ed 0, var(--condor-bg) 24rem);
+        linear-gradient(180deg, rgba(143, 23, 35, 0.07) 0, transparent 18rem),
+        linear-gradient(180deg, #fbfaf6 0, var(--condor-bg) 24rem);
     color: var(--condor-ink);
     font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 0.94rem;
@@ -52,13 +59,13 @@ body {
 
 a {
     color: var(--condor-accent-dark);
-    font-weight: 750;
+    font-weight: 700;
     text-decoration: none;
     transition: color 0.18s ease;
 }
 
 a:hover {
-    color: #5f3e2a;
+    color: var(--condor-red-dark);
 }
 
 .condor-shell {
@@ -77,7 +84,7 @@ a:hover {
     overflow-y: auto;
     border-right: 1px solid rgba(127, 85, 57, 0.12);
     background:
-        linear-gradient(180deg, rgba(255, 250, 242, 0.74), rgba(232, 220, 200, 0.96)),
+        linear-gradient(180deg, rgba(255, 248, 232, 0.82), rgba(248, 243, 231, 0.98)),
         var(--condor-sidebar);
     color: var(--condor-ink);
     box-shadow: 16px 0 42px rgba(83, 61, 42, 0.12);
@@ -114,10 +121,10 @@ a:hover {
     height: 2.85rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.76);
-    border-radius: 0.86rem;
-    background: linear-gradient(135deg, var(--condor-accent-dark), var(--condor-accent));
-    color: #fffaf2;
+    border: 1px solid rgba(255, 248, 232, 0.76);
+    border-radius: var(--condor-radius);
+    background: linear-gradient(135deg, var(--condor-red-dark), var(--condor-red));
+    color: var(--condor-cream);
     font-weight: 850;
     box-shadow: 0 14px 28px rgba(127, 85, 57, 0.25);
 }
@@ -153,8 +160,8 @@ a:hover {
     height: 2.4rem;
     place-items: center;
     border: 1px solid rgba(127, 85, 57, 0.16);
-    border-radius: 0.74rem;
-    background: rgba(255, 250, 242, 0.7);
+    border-radius: var(--condor-radius);
+    background: rgba(255, 248, 232, 0.72);
     color: var(--condor-accent-dark);
     transition:
         background 0.18s ease,
@@ -176,8 +183,8 @@ a:hover {
     bottom: 1rem;
     z-index: 45;
     display: none;
-    background: var(--condor-accent-dark);
-    color: #fffaf2;
+    background: var(--condor-red);
+    color: var(--condor-cream);
     box-shadow: 0 16px 34px rgba(127, 85, 57, 0.28);
 }
 
@@ -201,7 +208,7 @@ a:hover {
 .condor-nav-title {
     margin: 1rem 0 0.35rem;
     padding-left: 0.72rem;
-    color: #8b7a68;
+    color: #7d7163;
     font-size: 0.67rem;
     font-weight: 850;
     letter-spacing: 0.06em;
@@ -217,7 +224,7 @@ a:hover {
     min-height: 2.72rem;
     padding: 0.58rem 0.7rem;
     border: 1px solid transparent;
-    border-radius: 0.76rem;
+    border-radius: var(--condor-radius);
     color: var(--condor-ink-soft);
     font-size: 0.9rem;
     font-weight: 750;
@@ -234,16 +241,16 @@ a:hover {
     height: 1.6rem;
     flex: 0 0 auto;
     place-items: center;
-    border-radius: 0.52rem;
-    background: rgba(127, 85, 57, 0.08);
-    color: var(--condor-accent-dark);
+    border-radius: var(--condor-radius-sm);
+    background: rgba(143, 23, 35, 0.08);
+    color: var(--condor-red);
 }
 
 .condor-nav-link:hover,
 .condor-nav-link.active {
-    border-color: rgba(127, 85, 57, 0.15);
-    background: rgba(255, 250, 242, 0.82);
-    color: var(--condor-accent-dark);
+    border-color: rgba(143, 23, 35, 0.16);
+    background: rgba(255, 248, 232, 0.92);
+    color: var(--condor-red);
     transform: translateX(2px);
 }
 
@@ -254,7 +261,7 @@ a:hover {
     left: -0.9rem;
     width: 0.24rem;
     border-radius: 99rem;
-    background: var(--condor-accent-dark);
+    background: var(--condor-gold);
     content: "";
 }
 
@@ -276,7 +283,7 @@ a:hover {
     min-height: 5rem;
     padding: 0.88rem 1.45rem;
     border-bottom: 1px solid rgba(223, 207, 186, 0.82);
-    background: rgba(255, 250, 242, 0.86);
+    background: rgba(255, 253, 248, 0.9);
     color: var(--condor-ink);
     backdrop-filter: blur(18px);
 }
@@ -327,10 +334,10 @@ a:hover {
     align-items: center;
     min-height: 1.66rem;
     padding: 0.22rem 0.6rem;
-    border: 1px solid #d9bf9d;
+    border: 1px solid #e0c170;
     border-radius: 99rem;
-    background: #f5e6d2;
-    color: var(--condor-accent-dark);
+    background: #fff4d6;
+    color: var(--condor-red);
     font-size: 0.72rem;
     font-weight: 850;
 }
@@ -356,9 +363,9 @@ a:hover {
     width: 2.36rem;
     height: 2.36rem;
     place-items: center;
-    border-radius: 0.76rem;
-    background: linear-gradient(135deg, var(--condor-accent-dark), #533621);
-    color: #fffaf2;
+    border-radius: var(--condor-radius);
+    background: linear-gradient(135deg, var(--condor-red-dark), var(--condor-red));
+    color: var(--condor-cream);
     font-weight: 850;
 }
 
@@ -490,8 +497,8 @@ table {
 thead th {
     padding: 0.82rem 0.95rem;
     border-bottom: 1px solid var(--condor-line);
-    background: #efe2cf;
-    color: #5d4d3e;
+    background: #f6ead0;
+    color: var(--condor-red-dark);
     font-size: 0.72rem;
     font-weight: 850;
     letter-spacing: 0.04em;
@@ -511,7 +518,7 @@ tbody tr:last-child td {
 }
 
 tbody tr:hover td {
-    background: #fbf1e3;
+    background: #fff8e8;
     transition: background 0.18s ease;
 }
 
@@ -580,14 +587,7 @@ dd {
 }
 
 .condor-metric-card::after {
-    position: absolute;
-    right: -2.2rem;
-    bottom: -2.8rem;
-    width: 7.2rem;
-    height: 7.2rem;
-    border-radius: 50%;
-    background: rgba(176, 137, 104, 0.12);
-    content: "";
+    content: none;
 }
 
 .condor-metric-label {
@@ -637,9 +637,9 @@ dd {
     width: 2.55rem;
     height: 2.55rem;
     place-items: center;
-    border-radius: 0.78rem;
-    background: #f2e1cb;
-    color: var(--condor-accent-dark);
+    border-radius: var(--condor-radius);
+    background: #fff2cf;
+    color: var(--condor-red);
 }
 
 .badge,
@@ -675,8 +675,8 @@ dd {
 .condor-status.is-info,
 .text-bg-primary,
 .text-bg-info {
-    background: #efe0ce !important;
-    color: #6f472e !important;
+    background: #f7e9bd !important;
+    color: var(--condor-red-dark) !important;
 }
 
 .condor-status.is-muted,
@@ -686,7 +686,7 @@ dd {
 }
 
 .btn {
-    border-radius: 0.72rem;
+    border-radius: var(--condor-radius);
     font-weight: 820;
     transition:
         background 0.18s ease,
@@ -701,23 +701,23 @@ dd {
 }
 
 .btn-primary {
-    border-color: var(--condor-accent-dark);
-    background: var(--condor-accent-dark);
-    color: #fffaf2;
-    box-shadow: 0 12px 24px rgba(127, 85, 57, 0.2);
+    border-color: var(--condor-red);
+    background: var(--condor-red);
+    color: var(--condor-cream);
+    box-shadow: 0 12px 24px rgba(143, 23, 35, 0.18);
 }
 
 .btn-primary:hover,
 .btn-primary:focus {
-    border-color: #68432d;
-    background: #68432d;
-    color: #fffaf2;
+    border-color: var(--condor-red-dark);
+    background: var(--condor-red-dark);
+    color: var(--condor-cream);
 }
 
 .btn-outline-primary,
 .condor-logout-btn {
-    border-color: #c9aa88;
-    color: var(--condor-accent-dark);
+    border-color: #d9bd62;
+    color: var(--condor-red);
 }
 
 .btn-outline-primary:hover,
@@ -725,8 +725,8 @@ dd {
 .condor-logout-btn:hover,
 .condor-logout-btn:focus {
     border-color: var(--condor-accent-dark);
-    background: var(--condor-accent-dark);
-    color: #fffaf2;
+    background: var(--condor-red);
+    color: var(--condor-cream);
 }
 
 .btn-outline-secondary {
@@ -786,7 +786,7 @@ textarea {
     min-height: 2.68rem;
     padding: 0.6rem 0.78rem;
     border: 1px solid #d9c7b1;
-    border-radius: 0.72rem;
+    border-radius: var(--condor-radius);
     background: #fffdf8;
     color: var(--condor-ink);
     font: inherit;
@@ -799,9 +799,9 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    border-color: var(--condor-accent);
+    border-color: var(--condor-red);
     background: #ffffff;
-    box-shadow: 0 0 0 0.22rem rgba(176, 137, 104, 0.18);
+    box-shadow: 0 0 0 0.22rem rgba(143, 23, 35, 0.16);
     outline: none;
 }
 
@@ -818,9 +818,9 @@ button[type="submit"]:not(.btn) {
     min-height: 2.68rem;
     padding: 0.6rem 1rem;
     border: 0;
-    border-radius: 0.72rem;
-    background: var(--condor-accent-dark);
-    color: #fffaf2;
+    border-radius: var(--condor-radius);
+    background: var(--condor-red);
+    color: var(--condor-cream);
     font-weight: 850;
     box-shadow: 0 12px 24px rgba(127, 85, 57, 0.2);
     transition:
@@ -831,8 +831,8 @@ button[type="submit"]:not(.btn) {
 
 button[type="submit"]:not(.btn):hover {
     transform: translateY(-1px);
-    background: #68432d;
-    box-shadow: 0 16px 30px rgba(127, 85, 57, 0.26);
+    background: var(--condor-red-dark);
+    box-shadow: 0 16px 30px rgba(143, 23, 35, 0.24);
 }
 
 .condor-footer {
@@ -847,13 +847,15 @@ button[type="submit"]:not(.btn):hover {
 
 .condor-auth {
     position: relative;
-    display: grid;
+    display: flex;
     min-height: 100vh;
-    place-items: center;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem 3.8rem;
     background:
-        linear-gradient(135deg, rgba(247, 241, 232, 0.94), rgba(232, 220, 200, 0.9)),
+        linear-gradient(90deg, rgba(95, 13, 22, 0.08), transparent 36%),
+        linear-gradient(180deg, rgba(255, 248, 232, 0.98), rgba(244, 241, 235, 0.94)),
         var(--condor-bg);
 }
 
@@ -861,39 +863,238 @@ button[type="submit"]:not(.btn):hover {
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(120deg, rgba(127, 85, 57, 0.12), transparent 42%),
-        linear-gradient(315deg, rgba(176, 137, 104, 0.16), transparent 38%);
+        linear-gradient(180deg, rgba(143, 23, 35, 0.14), transparent 12rem),
+        linear-gradient(90deg, rgba(196, 154, 45, 0.12), transparent 56%);
 }
 
-.condor-auth-card {
+.condor-login-shell {
     position: relative;
     z-index: 1;
-    width: min(100%, 470px);
-    padding: 2.05rem;
-    border: 1px solid rgba(127, 85, 57, 0.14);
-    border-radius: 1.12rem;
-    background: rgba(255, 250, 242, 0.98);
-    box-shadow: 0 32px 90px rgba(83, 61, 42, 0.22);
+    display: grid;
+    width: min(100%, 1040px);
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+    overflow: hidden;
+    border: 1px solid rgba(143, 23, 35, 0.12);
+    border-radius: var(--condor-radius);
+    background: var(--condor-panel);
+    box-shadow: 0 30px 82px rgba(52, 39, 31, 0.18);
     animation: condor-page-in 0.36s ease both;
+}
+
+.condor-login-panel {
+    padding: clamp(1.25rem, 1rem + 1vw, 2.2rem);
+}
+
+.condor-login-intro {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 2rem;
+    border-right: 1px solid var(--condor-border);
+    background:
+        linear-gradient(180deg, rgba(95, 13, 22, 0.95), rgba(143, 23, 35, 0.92)),
+        var(--condor-red);
+    color: var(--condor-cream);
 }
 
 .condor-auth-brand {
     display: flex;
     align-items: center;
     gap: 0.9rem;
-    margin-bottom: 1.35rem;
 }
 
 .condor-auth-brand h1 {
     margin: 0;
-    color: var(--condor-ink);
+    color: inherit;
     font-size: 1.45rem;
 }
 
 .condor-auth-brand p {
     margin: 0.12rem 0 0;
-    color: var(--condor-muted);
+    color: inherit;
     font-size: 0.87rem;
+    opacity: 0.82;
+}
+
+.condor-login-intro .condor-brand-mark {
+    border-color: rgba(255, 248, 232, 0.24);
+    background: rgba(255, 248, 232, 0.12);
+    color: var(--condor-cream);
+}
+
+.condor-login-copy {
+    max-width: 31rem;
+}
+
+.condor-login-copy h2,
+.condor-login-heading h2 {
+    margin: 0.75rem 0 0.5rem;
+    color: inherit;
+    font-size: clamp(1.45rem, 1.1rem + 1vw, 2.2rem);
+}
+
+.condor-login-copy p {
+    color: rgba(255, 248, 232, 0.82) !important;
+    font-size: 1rem;
+}
+
+.condor-help-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.condor-help-grid a {
+    display: flex;
+    min-height: 4.8rem;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(255, 248, 232, 0.22);
+    border-radius: var(--condor-radius);
+    background: rgba(255, 248, 232, 0.1);
+    color: var(--condor-cream);
+    font-size: 0.88rem;
+    font-weight: 760;
+}
+
+.condor-help-grid a:hover {
+    background: rgba(255, 248, 232, 0.18);
+    color: #ffffff;
+}
+
+.condor-help-grid i {
+    color: #f1ca58;
+    font-size: 1.25rem;
+}
+
+.condor-login-form-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    background: linear-gradient(180deg, #ffffff, #fffdf8);
+}
+
+.condor-login-heading p {
+    margin-bottom: 0;
+}
+
+.condor-login-form {
+    padding: 0;
+}
+
+.condor-news-box {
+    padding: 1rem;
+    border: 1px solid var(--condor-line-soft);
+    border-left: 0.25rem solid var(--condor-gold);
+    border-radius: var(--condor-radius);
+    background: #fff8e8;
+}
+
+.condor-news-box h3 {
+    margin: 0.35rem 0;
+}
+
+.condor-news-box p {
+    margin-bottom: 0;
+}
+
+.condor-auth-footer {
+    position: absolute;
+    right: 1.25rem;
+    bottom: 1rem;
+    z-index: 1;
+    color: var(--condor-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.condor-section-kicker {
+    color: var(--condor-red);
+    font-size: 0.74rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.condor-login-intro .condor-section-kicker {
+    color: #f3d06b;
+}
+
+.condor-dashboard-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(143, 23, 35, 0.12);
+    border-radius: var(--condor-radius);
+    background:
+        linear-gradient(90deg, rgba(143, 23, 35, 0.1), transparent 56%),
+        #fffdf8;
+}
+
+.condor-dashboard-hero h1 {
+    margin: 0.35rem 0 0.45rem;
+}
+
+.condor-dashboard-hero p {
+    max-width: 52rem;
+    margin: 0;
+}
+
+.condor-dashboard-identity {
+    display: flex;
+    min-width: 260px;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.75rem;
+    border: 1px solid var(--condor-line-soft);
+    border-radius: var(--condor-radius);
+    background: var(--condor-panel);
+}
+
+.condor-dashboard-identity strong,
+.condor-dashboard-identity span {
+    display: block;
+    line-height: 1.2;
+}
+
+.condor-dashboard-identity span:not(.condor-avatar) {
+    color: var(--condor-muted);
+    font-size: 0.82rem;
+}
+
+.condor-scope-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+}
+
+.condor-scope-list span {
+    display: inline-flex;
+    padding: 0.32rem 0.55rem;
+    border: 1px solid #e4d2a0;
+    border-radius: 99rem;
+    background: #fff8e8;
+    color: var(--condor-red-dark);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.condor-section-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0.35rem 0 1rem;
+}
+
+.condor-section-heading h2,
+.condor-section-heading p {
+    margin-bottom: 0;
 }
 
 html.condor-sidebar-pref-collapsed .condor-brand-copy,
@@ -1014,12 +1215,30 @@ body.condor-sidebar-collapsed .condor-nav-link.active::before {
     .condor-user-area {
         width: 100%;
     }
+
+    .condor-login-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .condor-login-intro {
+        border-right: 0;
+        border-bottom: 1px solid rgba(255, 248, 232, 0.2);
+    }
+
+    .condor-dashboard-hero {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .condor-dashboard-identity {
+        min-width: 0;
+    }
 }
 
 @media (max-width: 640px) {
     .condor-content,
     .condor-page-surface,
-    .condor-auth-card {
+    .condor-login-panel {
         padding: 1rem;
     }
 
@@ -1035,5 +1254,14 @@ body.condor-sidebar-collapsed .condor-nav-link.active::before {
 
     .condor-user-area {
         width: 100%;
+    }
+
+    .condor-help-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .condor-auth {
+        align-items: flex-start;
+        padding: 0.8rem 0.8rem 3.4rem;
     }
 }
