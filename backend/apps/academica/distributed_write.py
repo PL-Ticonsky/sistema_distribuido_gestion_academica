@@ -31,6 +31,28 @@ def _grupo_table(id_facultad):
     return f'"{schema}"."grupo"'
 
 
+def _inscripcion_table(id_facultad):
+    schema = get_fdw_schema_for_facultad(id_facultad)
+    return f'"{schema}"."inscripcion"'
+
+
+def get_facultad_for_grupo(id_grupo):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select id_facultad
+            from reportes.vw_grupos_detalle
+            where id_grupo = %s
+            """,
+            [id_grupo],
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise ValidationError("No se encontro el grupo seleccionado.")
+    get_fdw_schema_for_facultad(row[0])
+    return row[0]
+
+
 def create_estudiante(
     *,
     id_usuario,
@@ -205,5 +227,112 @@ def deactivate_or_cancel_grupo(*, id_grupo, id_facultad):
               and id_facultad = %s
             """,
             ["Cancelado", id_grupo, id_facultad],
+        )
+        return cursor.rowcount
+
+
+def create_inscripcion(
+    *,
+    id_estudiante,
+    id_grupo,
+    nota1,
+    nota2,
+    nota3,
+    nota_final,
+    intento,
+    estado_inscripcion,
+):
+    id_inscripcion = uuid.uuid4()
+    id_facultad = get_facultad_for_grupo(id_grupo)
+    table = _inscripcion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            insert into {table} (
+                id_inscripcion,
+                id_facultad,
+                id_grupo,
+                id_estudiante,
+                nota1,
+                nota2,
+                nota3,
+                nota_final,
+                intento,
+                estado_inscripcion
+            )
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                id_inscripcion,
+                id_facultad,
+                id_grupo,
+                id_estudiante,
+                nota1,
+                nota2,
+                nota3,
+                nota_final,
+                intento,
+                estado_inscripcion,
+            ],
+        )
+    return id_inscripcion
+
+
+def update_inscripcion(
+    *,
+    id_inscripcion,
+    id_facultad,
+    id_estudiante,
+    id_grupo,
+    nota1,
+    nota2,
+    nota3,
+    nota_final,
+    intento,
+    estado_inscripcion,
+):
+    table = _inscripcion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set id_estudiante = %s,
+                id_grupo = %s,
+                nota1 = %s,
+                nota2 = %s,
+                nota3 = %s,
+                nota_final = %s,
+                intento = %s,
+                estado_inscripcion = %s
+            where id_inscripcion = %s
+              and id_facultad = %s
+            """,
+            [
+                id_estudiante,
+                id_grupo,
+                nota1,
+                nota2,
+                nota3,
+                nota_final,
+                intento,
+                estado_inscripcion,
+                id_inscripcion,
+                id_facultad,
+            ],
+        )
+        return cursor.rowcount
+
+
+def cancel_inscripcion(*, id_inscripcion, id_facultad):
+    table = _inscripcion_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            update {table}
+            set estado_inscripcion = %s
+            where id_inscripcion = %s
+              and id_facultad = %s
+            """,
+            ["Cancelada", id_inscripcion, id_facultad],
         )
         return cursor.rowcount

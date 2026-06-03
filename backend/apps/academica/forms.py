@@ -1,4 +1,3 @@
-import uuid
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -8,21 +7,25 @@ from django.db.models import Count, Max
 from apps.academica.distributed_write import (
     create_estudiante,
     create_grupo,
+    create_inscripcion,
     update_estudiante,
     update_grupo,
+    update_inscripcion,
 )
-from apps.academica.models import Estudiante, Grupo, Inscripcion
+from apps.academica.models import Inscripcion
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import (
     get_coordinated_program_ids,
-    get_student_for_user,
-    get_visible_group_ids,
-    get_visible_student_ids,
     is_superadmin,
 )
 from apps.estructura.models import Facultad, PeriodoAcademico, ProgramaAcademico
 from apps.financiera.models import Matricula
-from apps.reportes.models import EstudianteDetalle, UsuarioGlobal
+from apps.reportes.models import (
+    EstudianteDetalle,
+    GrupoDetalle,
+    InscripcionDetalle,
+    UsuarioGlobal,
+)
 
 ACTIVE_GROUP_STATES = ("Abierto", "En curso")
 ACTIVE_ENROLLMENT_STATES = ("Cursando", "Aprobada", "Reprobada")
@@ -39,6 +42,12 @@ GROUP_STATUS_CHOICES = (
     ("En curso", "En curso"),
     ("Finalizado", "Finalizado"),
     ("Cancelado", "Cancelado"),
+)
+ENROLLMENT_STATUS_CHOICES = (
+    ("Cursando", "Cursando"),
+    ("Aprobada", "Aprobada"),
+    ("Reprobada", "Reprobada"),
+    ("Cancelada", "Cancelada"),
 )
 
 
@@ -381,113 +390,165 @@ class GrupoUpdateForm(GrupoCreateForm):
 
 
 class InscripcionCreateForm(forms.Form):
-    estudiante = forms.ModelChoiceField(
-        queryset=Estudiante.objects.none(),
-        required=False,
+    id_estudiante = forms.ModelChoiceField(
         label="Estudiante",
+        queryset=EstudianteDetalle.objects.none(),
     )
-    grupo = forms.ModelChoiceField(
-        queryset=Grupo.objects.none(),
+    id_grupo = forms.ModelChoiceField(
         label="Grupo",
+        queryset=GrupoDetalle.objects.none(),
+    )
+    intento = forms.IntegerField(label="Intento", min_value=1, initial=1)
+    estado_inscripcion = forms.ChoiceField(
+        label="Estado",
+        choices=ENROLLMENT_STATUS_CHOICES,
+        initial="Cursando",
+    )
+    nota1 = forms.DecimalField(
+        label="Nota 1",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota2 = forms.DecimalField(
+        label="Nota 2",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota3 = forms.DecimalField(
+        label="Nota 3",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
+    )
+    nota_final = forms.DecimalField(
+        label="Nota final",
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=5,
+        required=False,
     )
 
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, inscripcion=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        self.roles = set(get_user_roles(user))
-        self.student = get_student_for_user(user)
+        self.inscripcion = inscripcion
 
-        if is_superadmin(user):
-            student_queryset = Estudiante.objects.select_related(
-                "usuario",
-                "programa_academico",
-            )
-            group_queryset = Grupo.objects.select_related(
-                "programa_asignatura__asignatura",
-                "programa_asignatura__programa_academico",
-                "periodo_academico",
-            )
-        else:
-            student_ids = get_visible_student_ids(user)
-            group_ids = get_visible_group_ids(user)
-            student_queryset = Estudiante.objects.select_related(
-                "usuario",
-                "programa_academico",
-            ).filter(id_estudiante__in=student_ids)
-            group_queryset = Grupo.objects.select_related(
-                "programa_asignatura__asignatura",
-                "programa_asignatura__programa_academico",
-                "periodo_academico",
-            ).filter(id_grupo__in=group_ids)
-
-        if self._is_student_only():
-            self.fields["estudiante"].required = False
-            self.fields["estudiante"].widget = forms.HiddenInput()
-            if self.student:
-                self.fields["estudiante"].queryset = Estudiante.objects.filter(
-                    pk=self.student.pk,
-                )
-                group_queryset = Grupo.objects.select_related(
-                    "programa_asignatura__asignatura",
-                    "programa_asignatura__programa_academico",
-                    "periodo_academico",
-                ).filter(
-                    programa_asignatura__programa_academico=self.student.programa_academico,
-                )
-            else:
-                self.fields["estudiante"].queryset = Estudiante.objects.none()
-                group_queryset = Grupo.objects.none()
-        else:
-            self.fields["estudiante"].required = True
-            self.fields["estudiante"].queryset = student_queryset.order_by(
-                "usuario__nombre",
-            )
-
-        self.fields["grupo"].queryset = group_queryset.filter(
-            estado_grupo__in=ACTIVE_GROUP_STATES,
+        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+            "nombre_facultad",
+            "nombre_programa",
+            "estudiante",
+        )
+        self.fields["id_grupo"].queryset = GrupoDetalle.objects.exclude(
+            estado_grupo="Cancelado",
         ).order_by(
-            "periodo_academico__id_periodo_academico",
-            "programa_asignatura__asignatura__nombre_asignatura",
+            "nombre_facultad",
+            "id_periodo_academico",
+            "nombre_asignatura",
             "codigo_grupo",
         )
-
-    def _is_student_only(self):
-        elevated_roles = {"coordinador", "decano", "superadmin"}
-        return "estudiante" in self.roles and not self.roles.intersection(
-            elevated_roles
+        self.fields["id_estudiante"].label_from_instance = (
+            lambda student: (
+                f"{student.nombre_facultad} - {student.estudiante} "
+                f"({student.nombre_programa})"
+            )
         )
+        self.fields["id_grupo"].label_from_instance = (
+            lambda group: (
+                f"{group.nombre_facultad} - {group.id_periodo_academico} - "
+                f"{group.nombre_asignatura} - {group.codigo_grupo}"
+            )
+        )
+
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+        if inscripcion is not None:
+            self.fields["id_estudiante"].disabled = True
+            self.fields["id_grupo"].disabled = True
+            self.fields["id_estudiante"].initial = inscripcion.id_estudiante
+            self.fields["id_grupo"].initial = inscripcion.id_grupo
+            self.fields["intento"].initial = inscripcion.intento
+            self.fields["estado_inscripcion"].initial = inscripcion.estado_inscripcion
+            self.fields["nota1"].initial = getattr(inscripcion, "nota1", None)
+            self.fields["nota2"].initial = getattr(inscripcion, "nota2", None)
+            self.fields["nota3"].initial = getattr(inscripcion, "nota3", None)
+            self.fields["nota_final"].initial = inscripcion.nota_final
 
     def clean(self):
         cleaned_data = super().clean()
+        student = cleaned_data.get("id_estudiante")
+        group = cleaned_data.get("id_grupo")
+        estado = cleaned_data.get("estado_inscripcion")
+        nota_final = cleaned_data.get("nota_final")
+        intento = cleaned_data.get("intento")
 
         if not user_can_write_enrollments(self.user):
-            raise ValidationError("No tienes permisos para crear inscripciones.")
+            raise ValidationError("No tienes permisos para gestionar inscripciones.")
 
-        estudiante = cleaned_data.get("estudiante")
-        grupo = cleaned_data.get("grupo")
+        if intento is not None and intento <= 0:
+            raise ValidationError("El intento debe ser mayor que cero.")
 
-        if self._is_student_only():
-            estudiante = self.student
-            cleaned_data["estudiante"] = estudiante
-            if not estudiante:
-                raise ValidationError(
-                    "Tu usuario no tiene un registro de estudiante asociado.",
-                )
+        if estado in {"Aprobada", "Reprobada"} and nota_final is None:
+            raise ValidationError(
+                "La nota final es obligatoria para aprobar o reprobar.",
+            )
 
-        if not estudiante or not grupo:
+        if not student or not group:
             return cleaned_data
 
-        validate_enrollment_business_rules(estudiante, grupo)
-        cleaned_data["intento"] = calculate_attempt(estudiante, grupo)
+        if student.id_facultad != group.id_facultad:
+            raise ValidationError(
+                "El estudiante y el grupo deben estar en la facultad.",
+            )
+
+        duplicate = InscripcionDetalle.objects.filter(
+            id_estudiante=student.id_estudiante,
+            id_grupo=group.id_grupo,
+        )
+        if self.inscripcion is not None:
+            duplicate = duplicate.exclude(
+                id_inscripcion=self.inscripcion.id_inscripcion,
+            )
+        if duplicate.exists():
+            raise ValidationError("El estudiante ya esta inscrito en este grupo.")
+
         return cleaned_data
 
     def save(self):
-        return Inscripcion.objects.create(
-            id_inscripcion=uuid.uuid4(),
-            estudiante=self.cleaned_data["estudiante"],
-            grupo=self.cleaned_data["grupo"],
+        return create_inscripcion(
+            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            id_grupo=self.cleaned_data["id_grupo"].pk,
+            nota1=self.cleaned_data.get("nota1"),
+            nota2=self.cleaned_data.get("nota2"),
+            nota3=self.cleaned_data.get("nota3"),
+            nota_final=self.cleaned_data.get("nota_final"),
             intento=self.cleaned_data["intento"],
-            estado_inscripcion="Cursando",
+            estado_inscripcion=self.cleaned_data["estado_inscripcion"],
+        )
+
+
+class InscripcionUpdateForm(InscripcionCreateForm):
+    def save(self):
+        return update_inscripcion(
+            id_inscripcion=self.inscripcion.id_inscripcion,
+            id_facultad=self.inscripcion.id_facultad,
+            id_estudiante=self.cleaned_data["id_estudiante"].pk,
+            id_grupo=self.cleaned_data["id_grupo"].pk,
+            nota1=self.cleaned_data.get("nota1"),
+            nota2=self.cleaned_data.get("nota2"),
+            nota3=self.cleaned_data.get("nota3"),
+            nota_final=self.cleaned_data.get("nota_final"),
+            intento=self.cleaned_data["intento"],
+            estado_inscripcion=self.cleaned_data["estado_inscripcion"],
         )
 
 

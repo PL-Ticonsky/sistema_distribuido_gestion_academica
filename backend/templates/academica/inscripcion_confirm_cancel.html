@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Cancelar inscripcion{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:inscripcion_detail' inscripcion.id_inscripcion %}">Volver al detalle</a></p>
+
+<h1>Cancelar inscripcion</h1>
+
+<div class="alert alert-warning">
+    Esta accion no elimina fisicamente el registro. Solo cambia el estado de la inscripcion a Cancelada en el nodo FDW correspondiente.
+</div>
+
+<dl>
+    <dt>Estudiante</dt>
+    <dd>{{ inscripcion.estudiante|default:inscripcion.id_estudiante }}</dd>
+    <dt>Grupo</dt>
+    <dd>{{ inscripcion.codigo_grupo|default:inscripcion.id_grupo }}</dd>
+    <dt>Asignatura</dt>
+    <dd>{{ inscripcion.nombre_asignatura|default:"-" }}</dd>
+    <dt>Estado actual</dt>
+    <dd>{{ inscripcion.estado_inscripcion|default:"-" }}</dd>
+</dl>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-danger" type="submit">
+            Cancelar inscripcion
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academica:inscripcion_detail' inscripcion.id_inscripcion %}">
+            Volver
+        </a>
+    </div>
+</form>
+{% endblock %}

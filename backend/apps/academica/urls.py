@@ -15,7 +15,9 @@ from apps.academica.views import (
     GrupoUpdateView,
     InscripcionCancelView,
     InscripcionCreateView,
+    InscripcionDetailView,
     InscripcionListView,
+    InscripcionUpdateView,
     NotaGrupoDetailView,
     NotaGrupoListView,
     NotaInscripcionUpdateView,
@@ -87,6 +89,16 @@ urlpatterns = [
         "inscripciones/crear/",
         InscripcionCreateView.as_view(),
         name="inscripcion_create",
+    ),
+    path(
+        "inscripciones/<uuid:id_inscripcion>/",
+        InscripcionDetailView.as_view(),
+        name="inscripcion_detail",
+    ),
+    path(
+        "inscripciones/<uuid:id_inscripcion>/editar/",
+        InscripcionUpdateView.as_view(),
+        name="inscripcion_update",
     ),
     path(
         "inscripciones/<uuid:id_inscripcion>/cancelar/",

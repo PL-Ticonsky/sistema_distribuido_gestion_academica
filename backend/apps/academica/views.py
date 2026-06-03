@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, TemplateView, View
 
 from apps.academica.distributed_write import (
+    cancel_inscripcion,
     deactivate_or_cancel_grupo,
     delete_or_deactivate_estudiante,
 )
@@ -13,8 +14,11 @@ from apps.academica.forms import (
     EstudianteUpdateForm,
     GrupoCreateForm,
     GrupoUpdateForm,
+    InscripcionCreateForm,
+    InscripcionUpdateForm,
     user_can_create_groups,
     user_can_create_students,
+    user_can_write_enrollments,
 )
 from apps.accounts.access import (
     STUDENT_ROLES,
@@ -32,6 +36,7 @@ from apps.reportes.models import (
 ACADEMIC_READ_ROLES = (*STUDENT_ROLES, "docente")
 STUDENT_WRITE_ROLES = ("coordinador", "superadmin")
 GROUP_WRITE_ROLES = ("coordinador", "superadmin")
+ENROLLMENT_WRITE_ROLES = ("estudiante", "coordinador", "decano", "superadmin")
 READ_ONLY_MESSAGE = "La escritura academica distribuida aun no esta habilitada."
 
 
@@ -324,6 +329,121 @@ class InscripcionListView(AcademicReportListView):
         "estado_inscripcion",
     )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["can_write_enrollments"] = user_can_write_enrollments(
+            self.request.user,
+        )
+        return context
+
+
+class InscripcionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
+    allowed_roles = ACADEMIC_READ_ROLES
+    model = InscripcionDetalle
+    template_name = "academica/inscripcion_detail.html"
+    context_object_name = "inscripcion"
+    pk_url_kwarg = "id_inscripcion"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["can_write_enrollments"] = user_can_write_enrollments(
+            self.request.user,
+        )
+        return context
+
+
+class InscripcionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
+    allowed_roles = ENROLLMENT_WRITE_ROLES
+    form_class = InscripcionCreateForm
+    template_name = "academica/inscripcion_form.html"
+    success_url = reverse_lazy("academica:inscripcion_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        # TODO: registrar auditoria distribuida cuando se consolide el contrato.
+        messages.success(self.request, "Inscripcion creada en el nodo distribuido.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_title"] = "Crear inscripcion"
+        context["submit_label"] = "Crear inscripcion"
+        return context
+
+
+class InscripcionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
+    allowed_roles = ENROLLMENT_WRITE_ROLES
+    form_class = InscripcionUpdateForm
+    template_name = "academica/inscripcion_form.html"
+    success_url = reverse_lazy("academica:inscripcion_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.inscripcion = get_object_or_404(
+            InscripcionDetalle,
+            pk=kwargs["id_inscripcion"],
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs["inscripcion"] = self.inscripcion
+        return kwargs
+
+    def form_valid(self, form):
+        updated_rows = form.save()
+        if updated_rows:
+            messages.success(
+                self.request,
+                "Inscripcion actualizada en el nodo distribuido.",
+            )
+        else:
+            messages.warning(
+                self.request,
+                "No se encontro la inscripcion para actualizar.",
+            )
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["inscripcion"] = self.inscripcion
+        context["form_title"] = "Editar inscripcion"
+        context["submit_label"] = "Guardar cambios"
+        return context
+
+
+class InscripcionCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = ENROLLMENT_WRITE_ROLES
+    template_name = "academica/inscripcion_confirm_cancel.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.inscripcion = get_object_or_404(
+            InscripcionDetalle,
+            pk=kwargs["id_inscripcion"],
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        updated_rows = cancel_inscripcion(
+            id_inscripcion=self.inscripcion.id_inscripcion,
+            id_facultad=self.inscripcion.id_facultad,
+        )
+        if updated_rows:
+            messages.success(request, "Inscripcion marcada como Cancelada.")
+        else:
+            messages.warning(request, "No se encontro la inscripcion para cancelar.")
+        return redirect("academica:inscripcion_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["inscripcion"] = self.inscripcion
+        return context
+
 
 class ReadOnlyRedirectView(LoginRequiredMixin, View):
     redirect_url_name = "academica:inscripcion_list"
@@ -351,14 +471,6 @@ class PlanEstudiosListView(ReadOnlyRedirectView):
 
 class PreRequisitoListView(ReadOnlyRedirectView):
     redirect_url_name = "academica:asignatura_list"
-
-
-class InscripcionCreateView(ReadOnlyRedirectView):
-    redirect_url_name = "academica:inscripcion_list"
-
-
-class InscripcionCancelView(ReadOnlyRedirectView):
-    redirect_url_name = "academica:inscripcion_list"
 
 
 class NotaGrupoListView(ReadOnlyRedirectView):
