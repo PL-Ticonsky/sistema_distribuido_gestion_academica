@@ -1,50 +1,88 @@
 # Migracion a sga_central
 
-Estado: validacion final de la version distribuida en modo lectura.
+Estado: version distribuida funcional validada.
 
 Rama validada: `feature/migracion-distribuida-completa`.
 
+Fecha de validacion: 2026-06-03.
+
 ## Objetivo
 
-Documentar la migracion distribuida usada por Django para operar sobre
-`sga_central` como base principal, conservar el login operativo centralizado y
-consumir informacion academica, financiera, institucional y de reportes sin
-modificar las bases fisicas de facultad desde la aplicacion.
+Documentar la arquitectura final usada por Django para operar sobre
+`sga_central` como base principal, con lectura global por vistas y escritura
+distribuida a traves de esquemas FDW controlados desde la aplicacion.
 
-## Arquitectura usada por Django
+## Arquitectura final
 
-La base `default` de Django es `sga_central`, configurada en
-`backend/config/settings.py` mediante:
+La base `default` de Django es `sga_central`. En
+`backend/config/settings.py`, el valor por defecto de `POSTGRES_DB` es:
 
 ```text
-POSTGRES_DB=sga_central
+sga_central
 ```
 
-Si la variable `POSTGRES_DB` no se define, el valor por defecto tambien es
-`sga_central`. No se debe volver a usar `gestion_academica_local` como base
-`default` para esta fase.
+No se usa `gestion_academica_local` como base default y no se agrego
+`DatabaseRouter`.
 
-La aplicacion consume principalmente estas fuentes:
-
-| Dominio | Fuente en `sga_central` | Uso en Django |
+| Dominio | Fuente o destino | Uso |
 | --- | --- | --- |
-| Login operativo | `public.usuario`, `public.usuario_groups`, `public.auth_group`, `public.django_session` | Autenticacion, roles y sesiones de Django. |
+| Login Django | `public.usuario`, `public.auth_group`, `public.usuario_groups`, `public.django_session` | Autenticacion, roles y sesiones. |
 | Estructura | `institucional.*` | Facultades, programas, periodos y asignaturas. |
-| Academica consolidada | `reportes.*` y vistas globales | Listados de estudiantes, profesores, grupos e inscripciones. |
-| Financiera | `financiero.*` y `reportes.*` | Tarifas, recibos y matriculas. |
-| Homologaciones | `reportes.vw_homologaciones_global` | Consulta global de solicitudes y pendientes. |
-| Reportes institucionales | `reportes.*` | Consultas 1 a 20 y vistas consolidadas. |
-| Auditoria | `auditoria.auditoria` | Consulta de trazabilidad para superadmin. |
-| Indicadores | `reportes.vw_estudiantes_detalle`, `reportes.vw_inscripciones_detalle`, `reportes.vw_programa_asignatura_global`, `reportes.vw_homologaciones_global` | Calculo de indicadores en modo lectura. |
+| Lectura academica | `reportes.vw_estudiantes_detalle`, `reportes.vw_profesores_detalle`, `reportes.vw_grupos_detalle`, `reportes.vw_inscripciones_detalle` | Listados y detalles globales. |
+| Escritura academica | `fdw_*.estudiante`, `fdw_*.grupo`, `fdw_*.inscripcion` | CRUD distribuido segun facultad. |
+| Homologaciones | `reportes.vw_homologaciones_global` para lectura y `fdw_*.homologacion` para escritura | Solicitudes, evaluacion y cancelacion. |
+| Financiera central | `financiero.tarifa_matricula`, `financiero.recibo` | CRUD de tarifas y recibos. |
+| Matriculas | `reportes.vw_matriculas_detalle` para lectura y `fdw_*.matricula` para escritura | CRUD distribuido de matriculas. |
+| Reportes | `reportes.*` | Consultas institucionales 1 a 20. |
+| Auditoria | `auditoria.auditoria` | Trazabilidad minima de operaciones CRUD. |
 
-Los modelos que consumen estas fuentes se mantienen como `managed = False`.
-Esto evita que Django intente crear, borrar o modificar tablas y vistas
-distribuidas.
+Los modelos que consumen tablas/vistas externas se mantienen con
+`managed = False`. Django no crea ni modifica el esquema distribuido.
+
+## Mapeo FDW
+
+La escritura distribuida no permite que el usuario escriba manualmente el
+esquema. El esquema se deriva desde `id_facultad` y un mapeo interno:
+
+| Facultad | Esquema FDW |
+| --- | --- |
+| `FING` | `fdw_ingenieria` |
+| `FCE` | `fdw_ciencias_educacion` |
+| `FTEC` | `fdw_tecnologica` |
+| `FMA` | `fdw_medio_ambiente` |
+| `FART` | `fdw_artes` |
+
+## CRUD implementado
+
+Academica:
+
+- Estudiantes: crear, editar y desactivar.
+- Grupos: crear, editar y cancelar.
+- Inscripciones: crear, editar y cancelar.
+
+Homologaciones:
+
+- Crear, editar, asignar/evaluar y cancelar.
+- La lectura global usa `reportes.vw_homologaciones_global`.
+- Si la vista no trae nombres legibles, algunas pantallas muestran UUIDs.
+
+Financiera:
+
+- Tarifas: crear, editar y desactivar en `financiero.tarifa_matricula`.
+- Recibos: crear, editar y anular en `financiero.recibo`.
+- Matriculas: crear, editar y cancelar en `fdw_*.matricula`, con lectura desde
+  `reportes.vw_matriculas_detalle`.
+
+Auditoria:
+
+- Las operaciones CRUD registran accion, usuario, fecha, tabla/esquema y
+  descripcion en `auditoria.auditoria`.
+- Si el registro de auditoria falla, la operacion principal no se bloquea.
+- No se registran contrasenas, hashes ni datos sensibles.
 
 ## Comandos de preparacion local
 
-Estos comandos fueron definidos para preparar usuarios y roles centrales en un
-entorno local o academico:
+Comandos usados o requeridos para preparar usuarios y roles demo:
 
 ```bash
 uv run python backend/manage.py ensure_central_demo_user
@@ -53,84 +91,46 @@ uv run python backend/manage.py reset_demo_users_passwords --password 'Demo12345
 uv run python backend/manage.py sync_central_roles --apply
 ```
 
-Advertencia: los comandos demo son solo para entorno local o academico. En
-especial, `reset_demo_users_passwords` cambia contrasenas de usuarios
-seleccionados y no debe ejecutarse en produccion.
+Advertencia: estos comandos son para entorno local o academico. El comando de
+reseteo de contrasenas no debe ejecutarse en produccion.
 
-## Validacion ejecutada
-
-Se valido login real con:
-
-```text
-admin.fing@universidad.edu / Demo12345*
-```
-
-La autenticacion fue correcta y la conexion activa confirmo:
-
-```text
-DB_DEFAULT_NAME sga_central
-DB_CONNECTION_NAME sga_central
-```
-
-Rutas principales validadas:
-
-| Ruta | Estado |
-| --- | --- |
-| `/login/` | OK, redirige a `/dashboard/` si el usuario ya esta autenticado. |
-| `/dashboard/` | OK |
-| `/estructura/facultades/` | OK |
-| `/estructura/programas/` | OK |
-| `/estructura/periodos/` | OK |
-| `/estructura/asignaturas/` | OK |
-| `/academica/estudiantes/` | OK |
-| `/academica/profesores/` | OK |
-| `/academica/docentes/` | OK |
-| `/academica/grupos/` | OK |
-| `/academica/inscripciones/` | OK |
-| `/financiera/tarifas/` | OK |
-| `/financiera/recibos/` | OK |
-| `/financiera/matriculas/` | OK |
-| `/homologaciones/` | OK |
-| `/homologaciones/solicitudes/` | OK |
-| `/homologaciones/pendientes/` | OK |
-| `/reportes/` | OK |
-| `/reportes/consultas/` | OK |
-| `/reportes/consultas/1/` a `/reportes/consultas/20/` | OK |
-| `/auditoria/` | OK |
-| `/indicadores/` | OK |
-
-## Apps pendientes revisadas
-
-`backend/apps/auditoria` quedo ajustada a solo lectura sobre
-`auditoria.auditoria`. Antes apuntaba a una tabla desnuda `auditoria`, que en
-`sga_central` resolvia como `public.auditoria` y fallaba porque esa relacion no
-existe.
-
-`backend/apps/indicadores` quedo ajustada a solo lectura sobre vistas
-`reportes.*`. Antes dependia de modelos academicos que buscaban relaciones
-desnudas como `public.estudiante`; en `sga_central` esas relaciones se exponen
-por vistas globales y no por tablas `public.*`.
-
-## Limitaciones actuales
-
-- Escritura distribuida no implementada.
-- Django no debe tocar bases fisicas de facultad.
-- No se modificaron scripts SQL.
-- No se crearon migraciones nuevas.
-- Homologaciones usa `reportes.vw_homologaciones_global`; la vista actual no
-  expone nombres legibles de estudiante o profesor evaluador.
-- `django_admin_log` puede quedar pendiente si `/admin/` no se usa en esta fase.
-- La validacion de login crea/usa sesion Django y puede actualizar campos
-  operativos propios de autenticacion; los modulos funcionales validados se
-  mantienen en modo lectura.
-
-## Comandos de validacion final
+## Comandos de validacion
 
 ```bash
 uv run python backend/manage.py check
 uv run ruff check backend/apps backend/config
 ```
 
-Nota de entorno: dentro del sandbox, `uv run` fallo al intentar escribir en
-`~/.cache/uv`. La validacion se ejecuto fuera del sandbox con aprobacion para que
-`uv` usara su cache local; ese fallo inicial fue del entorno, no del proyecto.
+## Rutas funcionales principales
+
+- `/login/`
+- `/dashboard/`
+- `/estructura/facultades/`
+- `/estructura/programas/`
+- `/estructura/periodos/`
+- `/estructura/asignaturas/`
+- `/academica/estudiantes/`
+- `/academica/grupos/`
+- `/academica/inscripciones/`
+- `/homologaciones/`
+- `/homologaciones/solicitudes/`
+- `/homologaciones/pendientes/`
+- `/financiera/tarifas/`
+- `/financiera/recibos/`
+- `/financiera/matriculas/`
+- `/reportes/`
+- `/reportes/consultas/`
+- `/reportes/consultas/1/` a `/reportes/consultas/20/`
+- `/auditoria/`
+- `/auditoria/registros/`
+
+## Limitaciones actuales
+
+- No se usa `DatabaseRouter`.
+- La escritura distribuida se hace via `fdw_*` desde `sga_central`.
+- Django no toca bases fisicas de facultad directamente.
+- Homologaciones puede mostrar UUIDs si la vista global no trae nombres
+  legibles.
+- `/admin/` no es obligatorio para la demo.
+- No se modificaron scripts SQL.
+- No se crearon migraciones.

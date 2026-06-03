@@ -1,93 +1,95 @@
 # Checklist de validacion distribuida
 
-Estado general: OK con pendientes documentados.
+Estado general: OK.
 
-Fecha de validacion: 2026-06-02.
-
-## Verificacion inicial
-
-| Verificacion | Evidencia esperada | Estado |
-| --- | --- | --- |
-| Rama activa | `feature/migracion-distribuida-completa` | OK |
-| Base default Django | `sga_central` en `backend/config/settings.py` | OK |
-| Conexion activa | `DB_CONNECTION_NAME sga_central` | OK |
-| SQL | Sin cambios en scripts SQL | OK |
-| Migraciones | Sin migraciones nuevas y sin `makemigrations` | OK |
-| Escritura distribuida | No implementada | OK |
-
-## Rutas probadas con login real
+Fecha de validacion: 2026-06-03.
 
 Usuario usado: `admin.fing@universidad.edu`.
 
-| Ruta | Evidencia esperada | Estado |
+## Verificacion inicial
+
+| Verificacion | Evidencia | Estado |
 | --- | --- | --- |
-| `/login/` | `302` a `/dashboard/` si ya esta autenticado | OK |
+| Rama activa | `feature/migracion-distribuida-completa` | OK |
+| Arbol de trabajo inicial | Limpio antes de documentar | OK |
+| Base default Django | `POSTGRES_DB` default `sga_central` | OK |
+| Conexion activa | `current_database() = sga_central` | OK |
+| SQL | Sin cambios en scripts SQL | OK |
+| Migraciones | Sin migraciones nuevas y sin `makemigrations` | OK |
+| Router | Sin `DatabaseRouter` | OK |
+
+## Rutas probadas
+
+| Ruta | Resultado | Estado |
+| --- | --- | --- |
+| `/login/` | `302` autenticado | OK |
 | `/dashboard/` | `200` | OK |
 | `/estructura/facultades/` | `200` | OK |
 | `/estructura/programas/` | `200` | OK |
 | `/estructura/periodos/` | `200` | OK |
 | `/estructura/asignaturas/` | `200` | OK |
 | `/academica/estudiantes/` | `200` | OK |
-| `/academica/profesores/` | `200` | OK |
-| `/academica/docentes/` | `200` | OK |
 | `/academica/grupos/` | `200` | OK |
 | `/academica/inscripciones/` | `200` | OK |
-| `/financiera/tarifas/` | `200` | OK |
-| `/financiera/recibos/` | `200` | OK |
-| `/financiera/matriculas/` | `200` | OK |
 | `/homologaciones/` | `200` | OK |
 | `/homologaciones/solicitudes/` | `200` | OK |
 | `/homologaciones/pendientes/` | `200` | OK |
+| `/financiera/tarifas/` | `200` | OK |
+| `/financiera/recibos/` | `200` | OK |
+| `/financiera/matriculas/` | `200` | OK |
 | `/reportes/` | `200` | OK |
 | `/reportes/consultas/` | `200` | OK |
 | `/auditoria/` | `200` | OK |
-| `/indicadores/` | `200` | OK |
+| `/auditoria/registros/` | `200` | OK |
 
-## Consultas institucionales probadas
+## Consultas institucionales
 
-| Consulta | Ruta | Evidencia esperada | Estado |
-| --- | --- | --- | --- |
-| 1 | `/reportes/consultas/1/` | `200` | OK |
-| 2 | `/reportes/consultas/2/` | `200` | OK |
-| 3 | `/reportes/consultas/3/` | `200` | OK |
-| 4 | `/reportes/consultas/4/` | `200` | OK |
-| 5 | `/reportes/consultas/5/` | `200` | OK |
-| 6 | `/reportes/consultas/6/` | `200` | OK |
-| 7 | `/reportes/consultas/7/` | `200` | OK |
-| 8 | `/reportes/consultas/8/` | `200` | OK |
-| 9 | `/reportes/consultas/9/` | `200` | OK |
-| 10 | `/reportes/consultas/10/` | `200` | OK |
-| 11 | `/reportes/consultas/11/` | `200` | OK |
-| 12 | `/reportes/consultas/12/` | `200` | OK |
-| 13 | `/reportes/consultas/13/` | `200` | OK |
-| 14 | `/reportes/consultas/14/` | `200` | OK |
-| 15 | `/reportes/consultas/15/` | `200` | OK |
-| 16 | `/reportes/consultas/16/` | `200` | OK |
-| 17 | `/reportes/consultas/17/` | `200` | OK |
-| 18 | `/reportes/consultas/18/` | `200` | OK |
-| 19 | `/reportes/consultas/19/` | `200` | OK |
-| 20 | `/reportes/consultas/20/` | `200` | OK |
-
-## Apps pendientes
-
-| App | Revision | Estado |
+| Rango | Evidencia | Estado |
 | --- | --- | --- |
-| `backend/apps/auditoria` | Ajustada de `public.auditoria` implicita a `auditoria.auditoria` con `managed = False`. | OK |
-| `backend/apps/indicadores` | Ajustada para calcular desde vistas `reportes.*` y catalogo `institucional.asignatura`, sin escritura. | OK |
+| `/reportes/consultas/1/` a `/reportes/consultas/20/` | Todas respondieron `200` | OK |
 
-## Comandos de validacion
+## CRUD probado con rollback
 
-| Comando | Evidencia esperada | Estado |
+Se ejecuto una transaccion de validacion con periodo temporal `TSTEND01` y
+rollback final. No quedo data dummy.
+
+| Flujo | Operaciones | Estado |
+| --- | --- | --- |
+| Estudiante | Crear, editar, desactivar | OK |
+| Grupo | Crear, editar, cancelar | OK |
+| Inscripcion | Crear, editar, cancelar | OK |
+| Homologacion | Crear, editar, evaluar, cancelar | OK |
+| Tarifa | Crear, editar, desactivar | OK |
+| Recibo | Crear, editar, anular | OK |
+| Matricula | Crear, editar, cancelar | OK |
+| Auditoria | Registro `CREAR_MATRICULA` verificado | OK |
+
+## Evidencia de rollback
+
+| Objeto | Conteo posterior | Estado |
+| --- | --- | --- |
+| `institucional.periodo_academico` temporal | `0` | OK |
+| `reportes.vw_estudiantes_detalle` temporal | `0` | OK |
+| `reportes.vw_grupos_detalle` temporal | `0` | OK |
+| `reportes.vw_inscripciones_detalle` temporal | `0` | OK |
+| `reportes.vw_homologaciones_global` temporal | `0` | OK |
+| `financiero.tarifa_matricula` temporal | `0` | OK |
+| `financiero.recibo` temporal | `0` | OK |
+| `reportes.vw_matriculas_detalle` temporal | `0` | OK |
+| `auditoria.auditoria` temporal | `0` | OK |
+
+## Comandos finales
+
+| Comando | Resultado | Estado |
 | --- | --- | --- |
 | `uv run python backend/manage.py check` | `System check identified no issues (0 silenced).` | OK |
 | `uv run ruff check backend/apps backend/config` | `All checks passed!` | OK |
 
 ## Observaciones
 
-- No se ejecutaron `makemigrations` ni `migrate`.
+- No se ejecuto `makemigrations`.
+- No se ejecuto `migrate`.
 - No se modificaron scripts SQL.
-- No se tocaron bases fisicas de facultad desde Django.
-- Los cambios de codigo fueron ajustes de mapeo/lectura en modelos, vistas y
-  plantillas.
-- `/indicadores/mis-indicadores/` con superadmin redirige a `/dashboard/` si el
-  usuario no tiene registro de estudiante asociado.
+- No se uso `gestion_academica_local`.
+- No se tocaron bases fisicas directamente desde Django.
+- La escritura distribuida se valido desde `sga_central` via `fdw_*`.
