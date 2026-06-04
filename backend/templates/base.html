@@ -4,13 +4,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}CONDOR 2{% endblock %} | CONDOR 2</title>
+    <title>{% block title %}Cóndor Caído{% endblock %} | Cóndor Caído</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/condor.css' %}">
+    <link rel="stylesheet" href="{% static 'css/condor-caido.css' %}">
     <script>
         (function () {
             try {
@@ -25,6 +25,9 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    <div class="condor-corner-note" aria-label="Mensaje de marca">
+        Vengan acá cuando se caiga Cóndor :3
+    </div>
     {% if request.user.is_authenticated %}
         <button class="condor-mobile-toggle" type="button" data-condor-sidebar-toggle aria-label="Mostrar u ocultar menu lateral" aria-expanded="false">
             <i class="bi bi-list"></i>
@@ -34,10 +37,12 @@
             <aside class="condor-sidebar">
                 <div class="condor-sidebar-header">
                     <a class="condor-brand" href="{% url 'accounts:dashboard' %}">
-                        <span class="condor-brand-mark">C2</span>
+                        <span class="condor-brand-mark condor-brand-mark-image">
+                            <img src="{% static 'img/brand/condor-caido-mark.png' %}" alt="" aria-hidden="true">
+                        </span>
                         <span class="condor-brand-copy">
-                            <span class="condor-brand-name">CONDOR 2</span>
-                            <span class="condor-brand-caption">Gestion academica</span>
+                            <span class="condor-brand-name">Cóndor Caído</span>
+                            <span class="condor-brand-caption">Sistema de Gestión Académica</span>
                         </span>
                     </a>
                     <button class="condor-collapse-btn" type="button" data-condor-sidebar-toggle aria-label="Contraer o expandir menu lateral" aria-expanded="true">
@@ -45,7 +50,7 @@
                     </button>
                 </div>
 
-                <nav class="condor-nav" aria-label="Navegacion principal">
+                <nav class="condor-nav" aria-label="Navegación principal">
                     <span class="condor-nav-title">Principal</span>
                     <a class="condor-nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
                         <i class="bi bi-speedometer2"></i>
@@ -53,7 +58,7 @@
                     </a>
 
                     {% if condor_show_structure %}
-                        <span class="condor-nav-title">Estructura</span>
+                        <span class="condor-nav-title">Administración</span>
                         <a class="condor-nav-link {% if request.resolver_match.app_name == 'estructura' %}active{% endif %}" href="{% url 'estructura:facultad_list' %}">
                             <i class="bi bi-building"></i>
                             <span>Facultades</span>
@@ -73,20 +78,28 @@
                     {% endif %}
 
                     {% if condor_show_student or condor_show_teacher %}
-                        <span class="condor-nav-title">Academica</span>
+                        <span class="condor-nav-title">Académica</span>
                         {% if condor_show_student %}
-                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'academica' %}active{% endif %}" href="{% url 'academica:asignatura_list' %}">
-                                <i class="bi bi-journal-bookmark"></i>
-                                <span>Asignaturas</span>
-                            </a>
                             <a class="condor-nav-link" href="{% url 'academica:plan_estudios_list' %}">
                                 <i class="bi bi-list-check"></i>
                                 <span>Plan de estudios</span>
                             </a>
                             <a class="condor-nav-link" href="{% url 'academica:inscripcion_list' %}">
                                 <i class="bi bi-card-checklist"></i>
-                                <span>Inscripciones</span>
+                                <span>Mis inscripciones</span>
                             </a>
+                            {% if "estudiante" in condor_roles %}
+                                <a class="condor-nav-link" href="{% url 'academica:historial_academico' %}">
+                                    <i class="bi bi-clock-history"></i>
+                                    <span>Historial académico</span>
+                                </a>
+                            {% endif %}
+                            {% if "coordinador" in condor_roles or "decano" in condor_roles or condor_is_superadmin %}
+                                <a class="condor-nav-link" href="{% url 'academica:asignatura_list' %}">
+                                    <i class="bi bi-journal-bookmark"></i>
+                                    <span>Asignaturas de programa</span>
+                                </a>
+                            {% endif %}
                             {% if "coordinador" in condor_roles or condor_is_superadmin %}
                                 <a class="condor-nav-link" href="{% url 'academica:estudiante_list' %}">
                                     <i class="bi bi-mortarboard"></i>
@@ -130,24 +143,24 @@
                         </a>
                         <a class="condor-nav-link" href="{% url 'financiera:matricula_list' %}">
                             <i class="bi bi-mortarboard"></i>
-                            <span>Matriculas</span>
+                            <span>Matrículas</span>
                         </a>
                     {% endif %}
 
-                    {% if condor_show_homologation or condor_show_audit %}
-                        <span class="condor-nav-title">Control</span>
-                        {% if condor_show_homologation %}
-                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
-                                <i class="bi bi-arrow-left-right"></i>
-                                <span>Homologaciones</span>
-                            </a>
-                        {% endif %}
-                        {% if condor_show_audit %}
-                            <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
-                                <i class="bi bi-shield-check"></i>
-                                <span>Auditoria</span>
-                            </a>
-                        {% endif %}
+                    {% if condor_show_homologation %}
+                        <span class="condor-nav-title">Homologaciones</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'homologaciones' %}active{% endif %}" href="{% url 'homologaciones:homologacion_list' %}">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span>Homologaciones</span>
+                        </a>
+                    {% endif %}
+
+                    {% if condor_show_audit %}
+                        <span class="condor-nav-title">Auditoría</span>
+                        <a class="condor-nav-link {% if request.resolver_match.app_name == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:auditoria_list' %}">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Auditoría</span>
+                        </a>
                     {% endif %}
 
                     {% if condor_show_reports %}
@@ -168,11 +181,11 @@
                         </button>
                         <div>
                             <div class="condor-breadcrumb">
-                                <a href="{% url 'accounts:dashboard' %}">CONDOR 2</a>
+                                <a href="{% url 'accounts:dashboard' %}">Cóndor Caído</a>
                                 <span>/</span>
                                 <span>{{ request.resolver_match.app_name|default:"dashboard"|title }}</span>
                             </div>
-                            <div class="condor-topbar-title">{% block page_title %}Sistema de gestion academica{% endblock %}</div>
+                            <div class="condor-topbar-title">{% block page_title %}Sistema de Gestión Académica{% endblock %}</div>
                         </div>
                     </div>
 
@@ -185,7 +198,9 @@
                             {% endfor %}
                         </div>
                         <div class="condor-user">
-                            <span class="condor-avatar">{{ request.user.nombre|default:request.user.correo|first|upper }}</span>
+                            <span class="condor-avatar" aria-hidden="true">
+                                <img src="{% static 'img/brand/condor-avatar.png' %}" alt="">
+                            </span>
                             <span>
                                 <span class="condor-user-name">{{ request.user.nombre }}</span>
                                 <span class="condor-user-email">{{ request.user.correo }}</span>
@@ -195,7 +210,7 @@
                             {% csrf_token %}
                             <button class="btn btn-outline-primary btn-sm condor-logout-btn" type="submit">
                                 <i class="bi bi-box-arrow-right"></i>
-                                Cerrar sesion
+                                Cerrar sesión
                             </button>
                         </form>
                     </div>
@@ -216,14 +231,6 @@
     {% else %}
         <main class="condor-auth">
             <div class="condor-auth-ambient" aria-hidden="true"></div>
-            <section class="condor-auth-card">
-                <div class="condor-auth-brand">
-                    <span class="condor-brand-mark">C2</span>
-                    <div>
-                        <h1>CONDOR 2</h1>
-                        <p>Sistema de gestion academica universitaria</p>
-                    </div>
-                </div>
     {% endif %}
 
                         {% block content %}{% endblock %}
@@ -233,13 +240,13 @@
                 </main>
 
                 <footer class="condor-footer">
-                    <span>CONDOR 2</span>
-                    <span>Ambiente local de desarrollo</span>
+                    <span>Cóndor Caído</span>
+                    <span>Developed by Ticonsky 0-0</span>
                 </footer>
             </div>
         </div>
     {% else %}
-            </section>
+            <footer class="condor-auth-footer">Developed by Ticonsky 0-0</footer>
         </main>
     {% endif %}
 

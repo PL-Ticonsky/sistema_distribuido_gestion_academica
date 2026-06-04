@@ -1,45 +1,119 @@
 {% extends "base.html" %}
 
-{% block title %}Planes de estudio{% endblock %}
+{% block title %}Plan de estudios{% endblock %}
+{% block page_title %}Plan de estudios{% endblock %}
 
 {% block content %}
-<h1>Planes de estudio</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Plan de estudios</h1>
+        <p class="mb-0">Programas académicos con resumen y materias agrupadas por semestre.</p>
+    </div>
+</div>
 
-{% regroup plan_asignaturas by programa_academico as planes_por_programa %}
+{% if condor_is_superadmin %}
+    <form class="row g-2 mb-3 condor-compact-filter" method="get">
+        <div class="col-12 col-md-5">
+            <select class="form-select" name="id_programa_academico">
+                {% for value, label in programa_choices %}
+                    <option value="{{ value }}" {% if active_filters.id_programa_academico == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-auto">
+            <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+        </div>
+    </form>
+{% endif %}
 
-{% for programa in planes_por_programa %}
-    <h2>{{ programa.grouper.nombre_programa }}</h2>
-    <p>{{ programa.grouper.facultad.nombre_facultad }}</p>
+<div class="condor-plan-accordion">
+    {% for programa in programas_plan %}
+        <section class="condor-plan-card">
+            <div class="condor-plan-summary">
+                <div class="condor-plan-title">
+                    <span class="condor-section-kicker">{{ programa.nombre_facultad }}</span>
+                    <h2>{{ programa.nombre_programa }}</h2>
+                </div>
+                <div class="condor-plan-stats" aria-label="Resumen del plan de estudios">
+                    <span>
+                        <strong>{{ programa.total_materias }}</strong>
+                        Materias
+                    </span>
+                    <span>
+                        <strong>{{ programa.total_semestres }}</strong>
+                        Semestres
+                    </span>
+                    <span>
+                        <strong>{{ programa.total_creditos }}</strong>
+                        Créditos
+                    </span>
+                </div>
+                <button
+                    class="btn btn-outline-primary btn-sm condor-plan-toggle"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#plan-programa-{{ forloop.counter }}"
+                    aria-expanded="false"
+                    aria-controls="plan-programa-{{ forloop.counter }}"
+                >
+                    <i class="bi bi-chevron-down"></i>
+                    Ver plan completo
+                </button>
+            </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Semestre</th>
-                <th>Codigo</th>
-                <th>Asignatura</th>
-                <th>Creditos</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for plan in programa.list %}
-                <tr>
-                    <td>{{ plan.semestre_sugerido }}</td>
-                    <td>{{ plan.asignatura.cod_asignatura }}</td>
-                    <td>
-                        <a href="{% url 'academica:asignatura_detail' plan.asignatura.cod_asignatura %}">
-                            {{ plan.asignatura.nombre_asignatura }}
-                        </a>
-                    </td>
-                    <td>{{ plan.asignatura.creditos }}</td>
-                    <td>{{ plan.tipo_asignatura }}</td>
-                    <td>{{ plan.estado }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% empty %}
-    <p>No hay planes de estudio registrados.</p>
-{% endfor %}
+            <div class="collapse" id="plan-programa-{{ forloop.counter }}">
+                <div class="condor-plan-detail">
+                    {% for semestre in programa.semestres %}
+                        <section class="condor-semester-block">
+                            <div class="condor-semester-heading">
+                                <h3>Semestre {{ semestre.semestre|default:"Sin definir" }}</h3>
+                                <span>{{ semestre.materias|length }} materia{{ semestre.materias|length|pluralize }}</span>
+                            </div>
+                            <div class="table-responsive condor-plan-table">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Asignatura</th>
+                                            <th>Créditos</th>
+                                            <th>Tipo</th>
+                                            <th>Homologable</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for materia in semestre.materias %}
+                                            <tr>
+                                                <td>{{ materia.cod_asignatura }}</td>
+                                                <td>{{ materia.nombre_asignatura }}</td>
+                                                <td>{{ materia.creditos|default:"-" }}</td>
+                                                <td>{{ materia.tipo_asignatura|default:"-" }}</td>
+                                                <td>{{ materia.homologable|yesno:"Sí,No" }}</td>
+                                                <td>
+                                                    <span class="condor-status {% if materia.estado == 'Activa' %}is-success{% else %}is-muted{% endif %}">
+                                                        {{ materia.estado }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'academica:plan_asignatura_grupos' materia.id_programa_asignatura %}">
+                                                        Ver grupos
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% empty %}
+        <div class="alert alert-info" role="alert">
+            No hay materias de plan de estudios para tu alcance actual.
+        </div>
+    {% endfor %}
+</div>
 {% endblock %}

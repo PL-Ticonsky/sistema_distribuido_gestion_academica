@@ -22,5 +22,7 @@
     <dd>{{ registro.tabla_afectada|default:"-" }}</dd>
     <dt>Descripcion completa</dt>
     <dd>{{ registro.descripcion|default:"-" }}</dd>
+    <dt>ID auditoria</dt>
+    <dd><code>{{ registro.id_auditoria }}</code></dd>
 </dl>
 {% endblock %}

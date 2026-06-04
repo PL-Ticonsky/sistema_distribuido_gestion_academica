@@ -1,26 +1,40 @@
 :root {
-    --condor-red: #8f1723;
-    --condor-red-dark: #5f0d16;
-    --condor-gold: #c49a2d;
-    --condor-cream: #fff8e8;
-    --condor-bg: #f4f1eb;
-    --condor-panel: #ffffff;
-    --condor-border: #ded6c8;
-    --condor-text: #252525;
-    --condor-muted: #6a6258;
-    --condor-success: #2f6f4e;
-    --condor-warning: #9a650d;
-    --condor-danger: #9b2737;
+    --cc-black: #101010;
+    --cc-ink: #1f2023;
+    --cc-red: #8f1723;
+    --cc-red-dark: #5a0b14;
+    --cc-gold: #c49a2d;
+    --cc-cream: #fff7e6;
+    --cc-bg: #f3f0e9;
+    --cc-panel: #ffffff;
+    --cc-border: #ded6c8;
+    --cc-text: #262626;
+    --cc-muted: #67625a;
+    --cc-success: #2f6f4e;
+    --cc-warning: #9a650d;
+    --cc-danger: #9b2737;
+    --condor-red: var(--cc-red);
+    --condor-red-dark: var(--cc-red-dark);
+    --condor-gold: var(--cc-gold);
+    --condor-cream: var(--cc-cream);
+    --condor-bg: var(--cc-bg);
+    --condor-panel: var(--cc-panel);
+    --condor-border: var(--cc-border);
+    --condor-text: var(--cc-text);
+    --condor-muted: var(--cc-muted);
+    --condor-success: var(--cc-success);
+    --condor-warning: var(--cc-warning);
+    --condor-danger: var(--cc-danger);
     --condor-bg-deep: #e9e2d7;
     --condor-surface: var(--condor-panel);
     --condor-surface-strong: #fffdf8;
-    --condor-sidebar: #f8f3e7;
-    --condor-sidebar-deep: #ead9b5;
+    --condor-sidebar: #151519;
+    --condor-sidebar-deep: #232126;
     --condor-accent: var(--condor-gold);
     --condor-accent-dark: var(--condor-red);
     --condor-accent-soft: #f5e9c8;
-    --condor-ink: var(--condor-text);
-    --condor-ink-soft: #3e3a35;
+    --condor-ink: var(--cc-ink);
+    --condor-ink-soft: #3f3c38;
     --condor-line: var(--condor-border);
     --condor-line-soft: #ebe5dc;
     --condor-info: #345a7a;
@@ -28,8 +42,8 @@
     --condor-radius-sm: 0.38rem;
     --condor-shadow: 0 18px 42px rgba(52, 39, 31, 0.12);
     --condor-shadow-soft: 0 10px 24px rgba(52, 39, 31, 0.08);
-    --condor-sidebar-width: 294px;
-    --condor-sidebar-collapsed: 88px;
+    --condor-sidebar-width: 252px;
+    --condor-sidebar-collapsed: 72px;
 }
 
 * {
@@ -49,7 +63,8 @@ body {
     min-height: 100vh;
     margin: 0;
     background:
-        linear-gradient(180deg, rgba(143, 23, 35, 0.07) 0, transparent 18rem),
+        linear-gradient(180deg, rgba(16, 16, 16, 0.06) 0, transparent 16rem),
+        linear-gradient(135deg, rgba(143, 23, 35, 0.08), transparent 28rem),
         linear-gradient(180deg, #fbfaf6 0, var(--condor-bg) 24rem);
     color: var(--condor-ink);
     font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -68,6 +83,24 @@ a:hover {
     color: var(--condor-red-dark);
 }
 
+.condor-corner-note {
+    position: fixed;
+    bottom: 0.72rem;
+    left: 0.72rem;
+    z-index: 60;
+    max-width: min(20rem, calc(100vw - 2rem));
+    padding: 0.32rem 0.62rem;
+    border: 1px solid rgba(196, 154, 45, 0.34);
+    border-radius: 99rem;
+    background: rgba(16, 16, 16, 0.72);
+    color: var(--condor-cream);
+    font-size: 0.74rem;
+    font-weight: 760;
+    line-height: 1.2;
+    box-shadow: 0 10px 24px rgba(16, 16, 16, 0.18);
+    pointer-events: none;
+}
+
 .condor-shell {
     display: grid;
     min-height: 100vh;
@@ -82,43 +115,60 @@ a:hover {
     height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
-    border-right: 1px solid rgba(127, 85, 57, 0.12);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 154, 45, 0.45) rgba(255, 247, 230, 0.06);
+    border-right: 1px solid rgba(255, 247, 230, 0.08);
     background:
-        linear-gradient(180deg, rgba(255, 248, 232, 0.82), rgba(248, 243, 231, 0.98)),
+        linear-gradient(180deg, rgba(16, 16, 16, 0.96), rgba(35, 33, 38, 0.98)),
         var(--condor-sidebar);
-    color: var(--condor-ink);
-    box-shadow: 16px 0 42px rgba(83, 61, 42, 0.12);
+    color: var(--condor-cream);
+    box-shadow: 16px 0 42px rgba(16, 16, 16, 0.2);
     transition:
         width 0.24s ease,
         transform 0.24s ease,
         opacity 0.24s ease;
 }
 
+.condor-sidebar::-webkit-scrollbar {
+    width: 0.45rem;
+}
+
+.condor-sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 247, 230, 0.06);
+}
+
+.condor-sidebar::-webkit-scrollbar-thumb {
+    border-radius: 99rem;
+    background: rgba(196, 154, 45, 0.42);
+}
+
 .condor-sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 1.08rem 1rem;
-    border-bottom: 1px solid rgba(127, 85, 57, 0.12);
+    gap: 0.55rem;
+    padding: 0.72rem 0.72rem;
+    border-bottom: 1px solid rgba(255, 247, 230, 0.1);
 }
 
 .condor-brand {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.78rem;
-    color: var(--condor-ink);
+    gap: 0.58rem;
+    color: var(--condor-cream);
 }
 
 .condor-brand:hover {
-    color: var(--condor-ink);
+    color: #ffffff;
 }
 
 .condor-brand-mark {
+    position: relative;
+    overflow: hidden;
     display: inline-grid;
-    width: 2.85rem;
-    height: 2.85rem;
+    width: 2.18rem;
+    height: 2.18rem;
     flex: 0 0 auto;
     place-items: center;
     border: 1px solid rgba(255, 248, 232, 0.76);
@@ -127,6 +177,19 @@ a:hover {
     color: var(--condor-cream);
     font-weight: 850;
     box-shadow: 0 14px 28px rgba(127, 85, 57, 0.25);
+}
+
+.condor-brand-mark-image {
+    background: var(--cc-black);
+}
+
+.condor-brand-mark-image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.94;
 }
 
 .condor-brand-copy {
@@ -141,14 +204,14 @@ a:hover {
 }
 
 .condor-brand-name {
-    font-size: 1.04rem;
+    font-size: 0.93rem;
     font-weight: 850;
 }
 
 .condor-brand-caption {
-    margin-top: 0.2rem;
-    color: var(--condor-muted);
-    font-size: 0.74rem;
+    margin-top: 0.12rem;
+    color: rgba(255, 247, 230, 0.7);
+    font-size: 0.66rem;
     font-weight: 700;
 }
 
@@ -156,13 +219,13 @@ a:hover {
 .condor-mobile-toggle,
 .condor-topbar-toggle {
     display: inline-grid;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 2.1rem;
+    height: 2.1rem;
     place-items: center;
     border: 1px solid rgba(127, 85, 57, 0.16);
     border-radius: var(--condor-radius);
-    background: rgba(255, 248, 232, 0.72);
-    color: var(--condor-accent-dark);
+    background: rgba(255, 248, 232, 0.08);
+    color: var(--condor-gold);
     transition:
         background 0.18s ease,
         transform 0.18s ease,
@@ -173,7 +236,7 @@ a:hover {
 .condor-mobile-toggle:hover,
 .condor-topbar-toggle:hover {
     transform: translateY(-1px);
-    background: #fffaf2;
+    background: rgba(255, 248, 232, 0.16);
     box-shadow: var(--condor-shadow-soft);
 }
 
@@ -201,15 +264,15 @@ a:hover {
 .condor-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.22rem;
-    padding: 0.9rem;
+    gap: 0.2rem;
+    padding: 0.5rem 0.55rem 0.8rem;
 }
 
 .condor-nav-title {
-    margin: 1rem 0 0.35rem;
-    padding-left: 0.72rem;
-    color: #7d7163;
-    font-size: 0.67rem;
+    margin: 0.58rem 0 0.18rem;
+    padding-left: 0.52rem;
+    color: rgba(255, 247, 230, 0.48);
+    font-size: 0.64rem;
     font-weight: 850;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -220,14 +283,14 @@ a:hover {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0.72rem;
-    min-height: 2.72rem;
-    padding: 0.58rem 0.7rem;
+    gap: 0.5rem;
+    min-height: 2.2rem;
+    padding: 0.36rem 0.5rem;
     border: 1px solid transparent;
     border-radius: var(--condor-radius);
-    color: var(--condor-ink-soft);
-    font-size: 0.9rem;
-    font-weight: 750;
+    color: rgba(255, 247, 230, 0.78);
+    font-size: 0.84rem;
+    font-weight: 720;
     transition:
         background 0.18s ease,
         border-color 0.18s ease,
@@ -237,29 +300,29 @@ a:hover {
 
 .condor-nav-link i {
     display: inline-grid;
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.25rem;
+    height: 1.25rem;
     flex: 0 0 auto;
     place-items: center;
     border-radius: var(--condor-radius-sm);
-    background: rgba(143, 23, 35, 0.08);
-    color: var(--condor-red);
+    background: rgba(255, 247, 230, 0.08);
+    color: var(--condor-gold);
 }
 
 .condor-nav-link:hover,
 .condor-nav-link.active {
-    border-color: rgba(143, 23, 35, 0.16);
-    background: rgba(255, 248, 232, 0.92);
-    color: var(--condor-red);
+    border-color: rgba(196, 154, 45, 0.28);
+    background: rgba(255, 247, 230, 0.1);
+    color: #ffffff;
     transform: translateX(2px);
 }
 
 .condor-nav-link.active::before {
     position: absolute;
-    top: 0.64rem;
-    bottom: 0.64rem;
-    left: -0.9rem;
-    width: 0.24rem;
+    top: 0.42rem;
+    bottom: 0.42rem;
+    left: -0.55rem;
+    width: 0.18rem;
     border-radius: 99rem;
     background: var(--condor-gold);
     content: "";
@@ -282,10 +345,16 @@ a:hover {
     gap: 1rem;
     min-height: 5rem;
     padding: 0.88rem 1.45rem;
-    border-bottom: 1px solid rgba(223, 207, 186, 0.82);
-    background: rgba(255, 253, 248, 0.9);
+    border-bottom: 1px solid rgba(222, 214, 200, 0.92);
+    background: rgba(255, 253, 248, 0.92);
     color: var(--condor-ink);
     backdrop-filter: blur(18px);
+}
+
+.condor-topbar .condor-topbar-toggle {
+    border-color: var(--condor-line);
+    background: #ffffff;
+    color: var(--condor-red);
 }
 
 .condor-topbar-left {
@@ -362,11 +431,21 @@ a:hover {
     display: inline-grid;
     width: 2.36rem;
     height: 2.36rem;
+    flex: 0 0 auto;
+    overflow: hidden;
     place-items: center;
+    border: 1px solid rgba(196, 154, 45, 0.44);
     border-radius: var(--condor-radius);
-    background: linear-gradient(135deg, var(--condor-red-dark), var(--condor-red));
-    color: var(--condor-cream);
-    font-weight: 850;
+    background: var(--cc-black);
+    box-shadow: 0 8px 18px rgba(16, 16, 16, 0.16);
+}
+
+.condor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    filter: contrast(1.08);
 }
 
 .condor-user-name,
@@ -395,6 +474,7 @@ a:hover {
 }
 
 .condor-page-surface {
+    position: relative;
     min-height: calc(100vh - 8.2rem);
     overflow-x: auto;
     padding: 1.45rem;
@@ -404,6 +484,23 @@ a:hover {
         linear-gradient(180deg, rgba(255, 253, 248, 0.94), rgba(255, 250, 242, 0.98)),
         var(--condor-surface);
     box-shadow: var(--condor-shadow);
+}
+
+.condor-page-surface::before {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: min(22vw, 16rem);
+    height: min(22vw, 16rem);
+    background: url("../img/brand/condor-caido-mark.png") center / contain no-repeat;
+    content: "";
+    opacity: 0.035;
+    pointer-events: none;
+}
+
+.condor-page-surface > * {
+    position: relative;
+    z-index: 1;
 }
 
 .condor-page-surface > h1:first-child,
@@ -582,8 +679,8 @@ dd {
 .condor-metric-card {
     position: relative;
     overflow: hidden;
-    min-height: 9rem;
-    padding: 1.05rem;
+    min-height: 7.15rem;
+    padding: 0.82rem;
 }
 
 .condor-metric-card::after {
@@ -592,16 +689,16 @@ dd {
 
 .condor-metric-label {
     color: var(--condor-muted);
-    font-size: 0.76rem;
+    font-size: 0.68rem;
     font-weight: 850;
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
 .condor-metric-value {
-    margin-top: 0.35rem;
+    margin-top: 0.22rem;
     color: var(--condor-ink);
-    font-size: 2rem;
+    font-size: 1.55rem;
     font-weight: 850;
     line-height: 1.05;
 }
@@ -609,15 +706,15 @@ dd {
 .condor-metric-help {
     position: relative;
     z-index: 1;
-    margin-top: 0.5rem;
+    margin-top: 0.35rem;
     color: var(--condor-muted);
-    font-size: 0.84rem;
+    font-size: 0.78rem;
 }
 
 .condor-action-card {
     display: block;
     height: 100%;
-    padding: 1.1rem;
+    padding: 0.82rem;
     color: var(--condor-ink);
     transition:
         transform 0.18s ease,
@@ -634,8 +731,8 @@ dd {
 
 .condor-action-icon {
     display: inline-grid;
-    width: 2.55rem;
-    height: 2.55rem;
+    width: 2rem;
+    height: 2rem;
     place-items: center;
     border-radius: var(--condor-radius);
     background: #fff2cf;
@@ -854,6 +951,8 @@ button[type="submit"]:not(.btn):hover {
     overflow: hidden;
     padding: 1.25rem 1.25rem 3.8rem;
     background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(243, 240, 233, 0.96)),
+        url("../img/brand/condor-caido-login.png") center / cover no-repeat,
         linear-gradient(90deg, rgba(95, 13, 22, 0.08), transparent 36%),
         linear-gradient(180deg, rgba(255, 248, 232, 0.98), rgba(244, 241, 235, 0.94)),
         var(--condor-bg);
@@ -871,13 +970,13 @@ button[type="submit"]:not(.btn):hover {
     position: relative;
     z-index: 1;
     display: grid;
-    width: min(100%, 1040px);
-    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+    width: min(100%, 1120px);
+    grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
     overflow: hidden;
-    border: 1px solid rgba(143, 23, 35, 0.12);
+    border: 1px solid rgba(16, 16, 16, 0.14);
     border-radius: var(--condor-radius);
     background: var(--condor-panel);
-    box-shadow: 0 30px 82px rgba(52, 39, 31, 0.18);
+    box-shadow: 0 30px 82px rgba(16, 16, 16, 0.2);
     animation: condor-page-in 0.36s ease both;
 }
 
@@ -889,12 +988,33 @@ button[type="submit"]:not(.btn):hover {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 2rem;
+    gap: 1.2rem;
     border-right: 1px solid var(--condor-border);
     background:
-        linear-gradient(180deg, rgba(95, 13, 22, 0.95), rgba(143, 23, 35, 0.92)),
-        var(--condor-red);
+        linear-gradient(180deg, rgba(16, 16, 16, 0.84), rgba(90, 11, 20, 0.9)),
+        var(--cc-black);
     color: var(--condor-cream);
+}
+
+.condor-login-hero-image {
+    display: grid;
+    min-height: 16rem;
+    margin: 0;
+    overflow: hidden;
+    place-items: center;
+    border: 1px solid rgba(255, 247, 230, 0.16);
+    border-radius: var(--condor-radius);
+    background: rgba(255, 247, 230, 0.08);
+}
+
+.condor-login-hero-image img {
+    width: 100%;
+    height: 100%;
+    min-height: 16rem;
+    object-fit: cover;
+    filter: contrast(1.08);
+    mix-blend-mode: screen;
+    opacity: 0.84;
 }
 
 .condor-auth-brand {
@@ -946,7 +1066,7 @@ button[type="submit"]:not(.btn):hover {
 
 .condor-help-grid a {
     display: flex;
-    min-height: 4.8rem;
+    min-height: 4.25rem;
     align-items: center;
     gap: 0.7rem;
     padding: 0.85rem;
@@ -973,7 +1093,10 @@ button[type="submit"]:not(.btn):hover {
     flex-direction: column;
     justify-content: center;
     gap: 1rem;
-    background: linear-gradient(180deg, #ffffff, #fffdf8);
+    border-left: 0.35rem solid var(--condor-gold);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 253, 248, 0.98)),
+        var(--condor-panel);
 }
 
 .condor-login-heading p {
@@ -1005,7 +1128,7 @@ button[type="submit"]:not(.btn):hover {
     right: 1.25rem;
     bottom: 1rem;
     z-index: 1;
-    color: var(--condor-muted);
+    color: var(--cc-ink);
     font-size: 0.82rem;
     font-weight: 700;
 }
@@ -1023,21 +1146,38 @@ button[type="submit"]:not(.btn):hover {
 }
 
 .condor-dashboard-hero {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 1.25rem;
+    margin-bottom: 0.82rem;
+    padding: 0.95rem;
     border: 1px solid rgba(143, 23, 35, 0.12);
     border-radius: var(--condor-radius);
     background:
-        linear-gradient(90deg, rgba(143, 23, 35, 0.1), transparent 56%),
+        linear-gradient(90deg, rgba(143, 23, 35, 0.1), rgba(255, 247, 230, 0.72) 56%),
         #fffdf8;
 }
 
+.condor-dashboard-watermark {
+    position: absolute;
+    right: 1rem;
+    bottom: -3.6rem;
+    width: min(34vw, 26rem);
+    max-width: 52%;
+    opacity: 0.08;
+    pointer-events: none;
+}
+
+.condor-dashboard-hero > :not(.condor-dashboard-watermark) {
+    position: relative;
+    z-index: 1;
+}
+
 .condor-dashboard-hero h1 {
-    margin: 0.35rem 0 0.45rem;
+    margin: 0.24rem 0 0.28rem;
 }
 
 .condor-dashboard-hero p {
@@ -1047,10 +1187,10 @@ button[type="submit"]:not(.btn):hover {
 
 .condor-dashboard-identity {
     display: flex;
-    min-width: 260px;
+    min-width: 230px;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.75rem;
+    padding: 0.55rem;
     border: 1px solid var(--condor-line-soft);
     border-radius: var(--condor-radius);
     background: var(--condor-panel);
@@ -1070,18 +1210,18 @@ button[type="submit"]:not(.btn):hover {
 .condor-scope-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.7rem;
+    gap: 0.32rem;
+    margin-top: 0.45rem;
 }
 
 .condor-scope-list span {
     display: inline-flex;
-    padding: 0.32rem 0.55rem;
+    padding: 0.22rem 0.46rem;
     border: 1px solid #e4d2a0;
     border-radius: 99rem;
     background: #fff8e8;
     color: var(--condor-red-dark);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 800;
 }
 
@@ -1089,12 +1229,160 @@ button[type="submit"]:not(.btn):hover {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    margin: 0.35rem 0 1rem;
+    margin: 0.25rem 0 0.72rem;
+}
+
+.condor-action-card .condor-action-icon {
+    margin-bottom: 0.55rem !important;
+}
+
+.condor-action-card .condor-status {
+    margin-bottom: 0.38rem !important;
+}
+
+.condor-action-card h3 {
+    margin-bottom: 0.32rem !important;
+    font-size: 0.94rem;
+}
+
+.condor-action-card p {
+    font-size: 0.8rem;
+    line-height: 1.35;
 }
 
 .condor-section-heading h2,
 .condor-section-heading p {
     margin-bottom: 0;
+}
+
+.condor-compact-filter {
+    max-width: 720px;
+}
+
+.condor-form-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--condor-line-soft);
+    border-radius: var(--condor-radius);
+    background: var(--condor-surface-strong);
+    box-shadow: 0 8px 22px rgba(83, 61, 42, 0.06);
+}
+
+.condor-form-section h2 {
+    margin-top: 0;
+    font-size: 0.98rem;
+}
+
+.condor-plan-accordion {
+    display: grid;
+    gap: 0.78rem;
+}
+
+.condor-plan-card {
+    overflow: hidden;
+    border: 1px solid var(--condor-line-soft);
+    border-radius: var(--condor-radius);
+    background: var(--condor-surface-strong);
+    box-shadow: var(--condor-shadow-soft);
+}
+
+.condor-plan-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 0.9rem;
+}
+
+.condor-plan-title h2 {
+    margin: 0.18rem 0 0;
+    font-size: 1.04rem;
+}
+
+.condor-plan-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.42rem;
+}
+
+.condor-plan-stats span {
+    display: inline-grid;
+    min-width: 5.3rem;
+    padding: 0.38rem 0.55rem;
+    border: 1px solid #e4d2a0;
+    border-radius: var(--condor-radius);
+    background: #fff8e8;
+    color: var(--condor-muted);
+    font-size: 0.72rem;
+    line-height: 1.12;
+    text-align: center;
+}
+
+.condor-plan-stats strong {
+    color: var(--condor-red-dark);
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.condor-plan-toggle {
+    white-space: nowrap;
+}
+
+.condor-plan-toggle i {
+    transition: transform 0.18s ease;
+}
+
+.condor-plan-toggle[aria-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+.condor-plan-detail {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0 0.9rem 0.9rem;
+}
+
+.condor-semester-block {
+    border: 1px solid var(--condor-line-soft);
+    border-radius: var(--condor-radius);
+    background: #ffffff;
+}
+
+.condor-semester-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.58rem 0.72rem;
+    border-bottom: 1px solid var(--condor-line-soft);
+    background: #fff8e8;
+}
+
+.condor-semester-heading h3 {
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.condor-semester-heading span {
+    color: var(--condor-muted);
+    font-size: 0.78rem;
+    font-weight: 760;
+}
+
+.condor-plan-table {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.condor-plan-table table {
+    font-size: 0.82rem;
+}
+
+.condor-plan-table thead th,
+.condor-plan-table tbody td {
+    padding: 0.5rem 0.62rem;
 }
 
 html.condor-sidebar-pref-collapsed .condor-brand-copy,
@@ -1233,6 +1521,19 @@ body.condor-sidebar-collapsed .condor-nav-link.active::before {
     .condor-dashboard-identity {
         min-width: 0;
     }
+
+    .condor-plan-summary {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+    }
+
+    .condor-plan-stats {
+        justify-content: flex-start;
+    }
+
+    .condor-plan-toggle {
+        width: 100%;
+    }
 }
 
 @media (max-width: 640px) {
@@ -1263,5 +1564,29 @@ body.condor-sidebar-collapsed .condor-nav-link.active::before {
     .condor-auth {
         align-items: flex-start;
         padding: 0.8rem 0.8rem 3.4rem;
+    }
+
+    .condor-corner-note {
+        right: auto;
+        bottom: 0.55rem;
+        left: 0.55rem;
+        max-width: calc(100vw - 5.4rem);
+        padding: 0.28rem 0.48rem;
+        font-size: 0.66rem;
+    }
+
+    .condor-plan-summary,
+    .condor-plan-detail {
+        padding: 0.72rem;
+    }
+
+    .condor-plan-stats span {
+        min-width: calc(50% - 0.24rem);
+    }
+
+    .condor-semester-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.15rem;
     }
 }

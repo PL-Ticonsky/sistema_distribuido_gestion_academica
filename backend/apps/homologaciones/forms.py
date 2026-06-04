@@ -9,6 +9,11 @@ from apps.academica.distributed_write import (
     evaluar_homologacion,
     update_homologacion,
 )
+from apps.accounts.access_context import (
+    filter_estudiantes_for_user,
+    filter_profesores_for_user,
+)
+from apps.accounts.roles import get_user_roles
 from apps.reportes.models import EstudianteDetalle, ProfesorDetalle
 
 HOMOLOGACION_STATUS_CHOICES = (
@@ -29,6 +34,44 @@ def _choice_rows(sql, params=None):
     with connection.cursor() as cursor:
         cursor.execute(sql, params or [])
         return cursor.fetchall()
+
+
+def _data_value(data, field):
+    if not data:
+        return None
+    return data.get(field) or None
+
+
+def _facultad_for_student(id_estudiante):
+    if not id_estudiante:
+        return None
+    rows = _choice_rows(
+        """
+        select id_facultad
+        from reportes.vw_estudiantes_detalle
+        where id_estudiante = %s
+        """,
+        [id_estudiante],
+    )
+    return rows[0][0] if rows else None
+
+
+def _default_evaluator_for_student(student):
+    rows = _choice_rows(
+        """
+        select id_profesor
+        from reportes.vw_profesores_detalle
+        where id_facultad = %s
+        order by profesor, correo
+        limit 1
+        """,
+        [student.id_facultad],
+    )
+    if not rows:
+        raise ValidationError(
+            "No hay evaluador disponible para esta facultad.",
+        )
+    return rows[0][0]
 
 
 class HomologacionForm(forms.Form):
@@ -54,17 +97,53 @@ class HomologacionForm(forms.Form):
         initial="Solicitada",
     )
 
-    def __init__(self, *args, homologacion=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        homologacion=None,
+        selected_facultad=None,
+        user=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.homologacion = homologacion
-        self.fields["id_estudiante"].queryset = EstudianteDetalle.objects.order_by(
+        self.user = user
+        roles = set(get_user_roles(user))
+        self.is_student_flow = (
+            "estudiante" in roles
+            and not roles.intersection({"coordinador", "decano", "superadmin"})
+            and homologacion is None
+        )
+        selected_student = _data_value(self.data, "id_estudiante")
+        selected_facultad = (
+            _facultad_for_student(selected_student)
+            or selected_facultad
+            or getattr(homologacion, "id_facultad", None)
+        )
+        student_queryset = EstudianteDetalle.objects.order_by(
             "nombre_facultad",
             "nombre_programa",
             "estudiante",
         )
-        self.fields[
-            "id_profesor_evaluador"
-        ].queryset = ProfesorDetalle.objects.order_by("nombre_facultad", "profesor")
+        professor_queryset = ProfesorDetalle.objects.order_by(
+            "nombre_facultad",
+            "profesor",
+        )
+        if selected_facultad:
+            student_queryset = student_queryset.filter(id_facultad=selected_facultad)
+            professor_queryset = professor_queryset.filter(
+                id_facultad=selected_facultad,
+            )
+        if user is not None:
+            student_queryset = filter_estudiantes_for_user(student_queryset, user)
+            professor_queryset = filter_profesores_for_user(professor_queryset, user)
+
+        self.student = student_queryset.first() if self.is_student_flow else None
+        if self.student is not None:
+            selected_facultad = self.student.id_facultad
+
+        self.fields["id_estudiante"].queryset = student_queryset
+        self.fields["id_profesor_evaluador"].queryset = professor_queryset
         self.fields["id_estudiante"].label_from_instance = (
             lambda student: (
                 f"{student.nombre_facultad} - {student.estudiante} "
@@ -72,11 +151,28 @@ class HomologacionForm(forms.Form):
             )
         )
         self.fields["id_profesor_evaluador"].label_from_instance = (
-            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+            lambda professor: (
+                f"{professor.nombre_facultad} - {professor.profesor} "
+                f"<{professor.correo}>"
+            )
+        )
+        selected_program = (
+            self.student.id_programa_academico if self.student is not None else None
         )
         self.fields["id_programa_asignatura"].choices = (
-            self._programa_asignatura_choices()
+            self._programa_asignatura_choices(
+                selected_facultad,
+                selected_program,
+            )
         )
+
+        if self.is_student_flow:
+            for field_name in (
+                "id_estudiante",
+                "id_profesor_evaluador",
+                "estado_homologacion",
+            ):
+                self.fields.pop(field_name, None)
 
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
@@ -97,20 +193,37 @@ class HomologacionForm(forms.Form):
                 "estado_homologacion"
             ].initial = homologacion.estado_homologacion
 
-    def _programa_asignatura_choices(self):
+    def _programa_asignatura_choices(
+        self,
+        selected_facultad=None,
+        selected_program=None,
+    ):
+        where = ["pa.estado = 'Activa'"]
+        params = []
+        if selected_facultad:
+            where.append("pa.id_facultad = %s")
+            params.append(selected_facultad)
+        if selected_program:
+            where.append("pa.id_programa_academico = %s")
+            params.append(selected_program)
         rows = _choice_rows(
-            """
+            f"""
             select
                 pa.id_programa_asignatura::text,
-                pa.id_facultad,
-                pa.id_programa_academico,
+                coalesce(f.nombre_facultad, pa.id_facultad),
+                coalesce(p.nombre_programa, pa.id_programa_academico),
                 coalesce(a.nombre_asignatura, pa.cod_asignatura) as asignatura
             from reportes.vw_programa_asignatura_global pa
+            left join institucional.facultad f
+              on f.id_facultad = pa.id_facultad
+            left join institucional.programa_academico p
+              on p.id_programa_academico = pa.id_programa_academico
             left join institucional.asignatura a
               on a.cod_asignatura = pa.cod_asignatura
-            where pa.estado = 'Activa'
+            where {" and ".join(where)}
             order by pa.id_facultad, pa.id_programa_academico, asignatura
             """,
+            params,
         )
         return [
             ("", "Seleccione una asignatura"),
@@ -125,9 +238,12 @@ class HomologacionForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        student = cleaned_data.get("id_estudiante")
+        student = self.student or cleaned_data.get("id_estudiante")
         professor = cleaned_data.get("id_profesor_evaluador")
         programa_asignatura = cleaned_data.get("id_programa_asignatura")
+
+        if self.is_student_flow and student is None:
+            raise ValidationError("No se encontro tu registro academico de estudiante.")
 
         if student and professor and student.id_facultad != professor.id_facultad:
             raise ValidationError("El evaluador debe pertenecer a la facultad.")
@@ -147,19 +263,44 @@ class HomologacionForm(forms.Form):
                 raise ValidationError(
                     "La asignatura destino no pertenece a la facultad.",
                 )
+            if (
+                self.is_student_flow
+                and rows[0][0] == student.id_facultad
+                and not _choice_rows(
+                    """
+                    select 1
+                    from reportes.vw_programa_asignatura_global
+                    where id_programa_asignatura = %s
+                      and id_programa_academico = %s
+                    """,
+                    [programa_asignatura, student.id_programa_academico],
+                )
+            ):
+                raise ValidationError(
+                    "La asignatura destino no pertenece a tu programa academico.",
+                )
 
         return cleaned_data
 
     def save(self):
+        student = self.student or self.cleaned_data["id_estudiante"]
+        evaluator_id = (
+            _default_evaluator_for_student(student)
+            if self.is_student_flow
+            else self.cleaned_data["id_profesor_evaluador"].pk
+        )
         if self.homologacion is None:
             return create_homologacion(
-                id_profesor_evaluador=self.cleaned_data["id_profesor_evaluador"].pk,
-                id_estudiante=self.cleaned_data["id_estudiante"].pk,
+                id_profesor_evaluador=evaluator_id,
+                id_estudiante=student.pk,
                 asignatura_origen=self.cleaned_data["asignatura_origen"],
                 institucion_origen=self.cleaned_data["institucion_origen"],
                 id_programa_asignatura=self.cleaned_data["id_programa_asignatura"],
                 fecha_solicitud=self.cleaned_data["fecha_solicitud"],
-                estado_homologacion=self.cleaned_data["estado_homologacion"],
+                estado_homologacion=self.cleaned_data.get(
+                    "estado_homologacion",
+                    "Solicitada",
+                ),
             )
 
         return update_homologacion(
@@ -192,7 +333,10 @@ class HomologacionAssignEvaluatorForm(forms.Form):
             .order_by("profesor")
         )
         self.fields["id_profesor_evaluador"].label_from_instance = (
-            lambda professor: f"{professor.nombre_facultad} - {professor.profesor}"
+            lambda professor: (
+                f"{professor.profesor} <{professor.correo}> - "
+                f"{professor.nombre_facultad}"
+            )
         )
         self.fields["id_profesor_evaluador"].initial = (
             homologacion.id_profesor_evaluador

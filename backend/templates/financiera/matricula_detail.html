@@ -18,10 +18,8 @@
 </div>
 
 <dl class="row">
-    <dt>ID matricula</dt>
-    <dd>{{ matricula.id_matricula }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ matricula.estudiante|default:matricula.id_estudiante }}</dd>
+    <dd>{{ matricula.estudiante|default:"Estudiante no disponible" }}</dd>
     <dt>Facultad</dt>
     <dd>{{ matricula.nombre_facultad|default:matricula.id_facultad }}</dd>
     <dt>Programa</dt>
@@ -36,8 +34,8 @@
     <dd>{{ matricula.valor_pagado|default:"-" }}</dd>
     <dt>Fecha pago</dt>
     <dd>{{ matricula.fecha_pago|default:"-" }}</dd>
-    <dt>ID recibo</dt>
-    <dd>{{ matricula.id_recibo }}</dd>
+    <dt>Recibo asociado</dt>
+    <dd>{{ recibo_label|default:"Recibo no disponible" }}</dd>
 </dl>
 
 <p>

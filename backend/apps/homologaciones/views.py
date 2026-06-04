@@ -6,6 +6,8 @@ from django.views.generic import DetailView, FormView, ListView, TemplateView
 
 from apps.academica.distributed_write import cancel_homologacion
 from apps.accounts.access import HOMOLOGATION_ROLES, RoleRequiredMixin
+from apps.accounts.access_context import filter_homologaciones_for_user
+from apps.accounts.roles import get_user_roles
 from apps.auditoria.services import registrar_auditoria
 from apps.homologaciones.forms import (
     HomologacionAssignEvaluatorForm,
@@ -13,6 +15,22 @@ from apps.homologaciones.forms import (
     HomologacionForm,
 )
 from apps.homologaciones.models import HomologacionGlobal
+from apps.reportes.choices import (
+    distinct_choices,
+    estudiante_labels,
+    facultad_choices,
+    facultad_labels,
+    profesor_labels,
+    programa_asignatura_labels,
+)
+
+HOMOLOGATION_MANAGE_ROLES = ("coordinador", "decano", "superadmin")
+HOMOLOGATION_EVALUATE_ROLES = ("docente", "coordinador", "decano", "superadmin")
+
+
+def _has_role(user, roles):
+    current_roles = set(get_user_roles(user))
+    return "superadmin" in current_roles or bool(current_roles.intersection(roles))
 
 
 class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
@@ -30,7 +48,10 @@ class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     )
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = filter_homologaciones_for_user(
+            super().get_queryset(),
+            self.request.user,
+        )
         forced_state = getattr(self, "forced_state", None)
         if forced_state:
             queryset = queryset.filter(estado_homologacion=forced_state)
@@ -45,7 +66,58 @@ class HomologacionListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         context["active_filters"] = {
             field: self.request.GET.get(field, "") for field in self.filters
         }
-        context["can_write_homologaciones"] = True
+        context["can_create_homologaciones"] = True
+        context["can_edit_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        context["can_assign_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        context["can_evaluate_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_EVALUATE_ROLES,
+        )
+        context["can_cancel_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        context["facultad_choices"] = facultad_choices()
+        context["estado_choices"] = distinct_choices(
+            HomologacionGlobal,
+            "estado_homologacion",
+            "Todos los estados",
+        )
+        estudiantes = estudiante_labels(
+            [homologacion.id_estudiante for homologacion in context["homologaciones"]],
+        )
+        profesores = profesor_labels(
+            [
+                homologacion.id_profesor_evaluador
+                for homologacion in context["homologaciones"]
+            ],
+        )
+        facultades = facultad_labels(
+            [homologacion.id_facultad for homologacion in context["homologaciones"]],
+        )
+        asignaturas_destino = programa_asignatura_labels(
+            [
+                homologacion.id_programa_asignatura
+                for homologacion in context["homologaciones"]
+            ],
+        )
+        for homologacion in context["homologaciones"]:
+            homologacion.estudiante_label = estudiantes.get(
+                homologacion.id_estudiante,
+            )
+            homologacion.profesor_label = profesores.get(
+                homologacion.id_profesor_evaluador,
+            )
+            homologacion.facultad_label = facultades.get(homologacion.id_facultad)
+            homologacion.asignatura_destino_label = asignaturas_destino.get(
+                homologacion.id_programa_asignatura,
+            )
         return context
 
 
@@ -64,9 +136,42 @@ class HomologacionDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     context_object_name = "homologacion"
     pk_url_kwarg = "id_homologacion"
 
+    def get_queryset(self):
+        return filter_homologaciones_for_user(
+            super().get_queryset(),
+            self.request.user,
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["can_write_homologaciones"] = True
+        context["can_edit_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        context["can_assign_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        context["can_evaluate_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_EVALUATE_ROLES,
+        )
+        context["can_cancel_homologaciones"] = _has_role(
+            self.request.user,
+            HOMOLOGATION_MANAGE_ROLES,
+        )
+        estudiantes = estudiante_labels([self.object.id_estudiante])
+        profesores = profesor_labels([self.object.id_profesor_evaluador])
+        facultades = facultad_labels([self.object.id_facultad])
+        asignaturas_destino = programa_asignatura_labels(
+            [self.object.id_programa_asignatura],
+        )
+        context["estudiante_label"] = estudiantes.get(self.object.id_estudiante)
+        context["profesor_label"] = profesores.get(self.object.id_profesor_evaluador)
+        context["facultad_label"] = facultades.get(self.object.id_facultad)
+        context["asignatura_destino_label"] = asignaturas_destino.get(
+            self.object.id_programa_asignatura,
+        )
         return context
 
 
@@ -75,6 +180,12 @@ class HomologacionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     form_class = HomologacionForm
     template_name = "homologaciones/homologacion_form.html"
     success_url = reverse_lazy("homologaciones:homologacion_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
+        kwargs["user"] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         id_homologacion = form.save()
@@ -92,18 +203,23 @@ class HomologacionCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["form_title"] = "Crear homologacion"
         context["submit_label"] = "Crear homologacion"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         return context
 
 
 class HomologacionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
-    allowed_roles = HOMOLOGATION_ROLES
+    allowed_roles = HOMOLOGATION_MANAGE_ROLES
     form_class = HomologacionForm
     template_name = "homologaciones/homologacion_form.html"
     success_url = reverse_lazy("homologaciones:homologacion_list")
 
     def dispatch(self, request, *args, **kwargs):
         self.homologacion = get_object_or_404(
-            HomologacionGlobal,
+            filter_homologaciones_for_user(
+                HomologacionGlobal.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_homologacion"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -111,6 +227,7 @@ class HomologacionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["homologacion"] = self.homologacion
+        kwargs["user"] = self.request.user
         return kwargs
 
     def form_valid(self, form):
@@ -143,14 +260,17 @@ class HomologacionUpdateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
 
 
 class HomologacionAssignEvaluatorView(LoginRequiredMixin, RoleRequiredMixin, FormView):
-    allowed_roles = HOMOLOGATION_ROLES
+    allowed_roles = HOMOLOGATION_MANAGE_ROLES
     form_class = HomologacionAssignEvaluatorForm
     template_name = "homologaciones/homologacion_asignar_evaluador.html"
     success_url = reverse_lazy("homologaciones:homologacion_list")
 
     def dispatch(self, request, *args, **kwargs):
         self.homologacion = get_object_or_404(
-            HomologacionGlobal,
+            filter_homologaciones_for_user(
+                HomologacionGlobal.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_homologacion"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -181,18 +301,24 @@ class HomologacionAssignEvaluatorView(LoginRequiredMixin, RoleRequiredMixin, For
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["homologacion"] = self.homologacion
+        context["facultad_label"] = facultad_labels(
+            [self.homologacion.id_facultad],
+        ).get(self.homologacion.id_facultad)
         return context
 
 
 class HomologacionEvaluateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
-    allowed_roles = HOMOLOGATION_ROLES
+    allowed_roles = HOMOLOGATION_EVALUATE_ROLES
     form_class = HomologacionEvaluateForm
     template_name = "homologaciones/homologacion_evaluar.html"
     success_url = reverse_lazy("homologaciones:homologacion_list")
 
     def dispatch(self, request, *args, **kwargs):
         self.homologacion = get_object_or_404(
-            HomologacionGlobal,
+            filter_homologaciones_for_user(
+                HomologacionGlobal.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_homologacion"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -220,16 +346,22 @@ class HomologacionEvaluateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["homologacion"] = self.homologacion
+        context["facultad_label"] = facultad_labels(
+            [self.homologacion.id_facultad],
+        ).get(self.homologacion.id_facultad)
         return context
 
 
 class HomologacionCancelView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
-    allowed_roles = HOMOLOGATION_ROLES
+    allowed_roles = HOMOLOGATION_MANAGE_ROLES
     template_name = "homologaciones/homologacion_confirm_cancel.html"
 
     def dispatch(self, request, *args, **kwargs):
         self.homologacion = get_object_or_404(
-            HomologacionGlobal,
+            filter_homologaciones_for_user(
+                HomologacionGlobal.objects.all(),
+                request.user,
+            ),
             pk=kwargs["id_homologacion"],
         )
         return super().dispatch(request, *args, **kwargs)

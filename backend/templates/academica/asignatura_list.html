@@ -1,13 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Asignaturas{% endblock %}
+{% block title %}{{ list_title|default:"Asignaturas" }}{% endblock %}
 
 {% block content %}
-<h1>Asignaturas</h1>
+<h1>{{ list_title|default:"Asignaturas" }}</h1>
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-4">
-        <input class="form-control" type="text" name="estado" value="{{ active_filters.estado }}" placeholder="Estado">
+        <select class="form-select" name="estado">
+            {% for value, label in estado_choices %}
+                <option value="{{ value }}" {% if active_filters.estado == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>
@@ -21,26 +25,34 @@
             <th>Codigo</th>
             <th>Nombre</th>
             <th>Creditos</th>
-            <th>Horas teoria</th>
-            <th>Horas practica</th>
+            <th>Programa</th>
+            <th>Semestre</th>
+            <th>Tipo</th>
             <th>Estado</th>
             <th>Homologable</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
-        {% for asignatura in asignaturas %}
+        {% for asignatura in asignaturas_programa %}
             <tr>
                 <td>{{ asignatura.cod_asignatura }}</td>
                 <td>{{ asignatura.nombre_asignatura }}</td>
-                <td>{{ asignatura.creditos }}</td>
-                <td>{{ asignatura.horas_teoria }}</td>
-                <td>{{ asignatura.horas_pract }}</td>
+                <td>{{ asignatura.creditos|default:"-" }}</td>
+                <td>{{ asignatura.nombre_programa|default:"-" }}</td>
+                <td>{{ asignatura.semestre_sugerido|default:"-" }}</td>
+                <td>{{ asignatura.tipo_asignatura|default:"-" }}</td>
                 <td>{{ asignatura.estado }}</td>
                 <td>{{ asignatura.homologable|yesno:"Si,No" }}</td>
+                <td>
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'academica:plan_asignatura_grupos' asignatura.id_programa_asignatura %}">
+                        Ver grupos
+                    </a>
+                </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7">No hay asignaturas registradas.</td>
+                <td colspan="9">No hay asignaturas registradas para tu alcance.</td>
             </tr>
         {% endfor %}
     </tbody>

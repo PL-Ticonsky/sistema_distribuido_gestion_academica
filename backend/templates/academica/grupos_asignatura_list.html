@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Grupos ofertados{% endblock %}
+{% block page_title %}Grupos ofertados{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'academica:plan_estudios_list' %}">Volver al plan de estudios</a></p>
+
+<div class="mb-3">
+    <h1 class="mb-1">{{ plan.nombre_asignatura }}</h1>
+    <p class="mb-0">{{ plan.nombre_programa }} - {{ plan.nombre_facultad }}</p>
+</div>
+
+{% if current_period_ids %}
+    <p class="text-muted">Periodo activo: {{ current_period_ids|join:", " }}</p>
+{% endif %}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Periodo</th>
+                <th>Grupo</th>
+                <th>Profesor</th>
+                <th>Cupo</th>
+                <th>Inscritos</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for grupo in grupos %}
+                <tr>
+                    <td>{{ grupo.id_periodo_academico|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+                            {{ grupo.codigo_grupo|default:grupo.id_grupo }}
+                        </a>
+                    </td>
+                    <td>{{ grupo.profesor|default:"Sin asignar" }}</td>
+                    <td>{{ grupo.cupo_maximo|default:"-" }}</td>
+                    <td>{{ grupo.inscritos_actuales }}</td>
+                    <td>{{ grupo.estado_grupo }}</td>
+                    <td>
+                        {% if grupo.can_request_enrollment %}
+                            <a class="btn btn-primary btn-sm" href="{% url 'academica:inscripcion_create' %}?id_grupo={{ grupo.id_grupo }}">
+                                Solicitar inscripcion
+                            </a>
+                        {% else %}
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academica:grupo_detail' grupo.id_grupo %}">
+                                Ver detalle
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7">No hay grupos ofertados en el periodo actual.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}{{ form_title|default:"Estudiante" }}{% endblock %}
+{% block title %}{{ form_title|default:"Profesor" }}{% endblock %}
 
 {% block content %}
-<p><a href="{% url 'academica:estudiante_list' %}">Volver a estudiantes</a></p>
+<p><a href="{% url 'academica:profesor_list' %}">Volver a docentes</a></p>
 
 <div class="mb-3">
-    <h1 class="mb-1">{{ form_title|default:"Estudiante" }}</h1>
+    <h1 class="mb-1">{{ form_title|default:"Profesor" }}</h1>
     <p class="mb-0">
-        La lectura se confirma desde reportes.vw_estudiantes_detalle y la escritura se envia al esquema FDW segun la facultad.
+        Crea el usuario base, asigna el rol docente y registra el profesor en el nodo distribuido de la facultad.
     </p>
 </div>
 
@@ -35,28 +35,26 @@
 
 <form method="post">
     {% csrf_token %}
-    {% if form.nombre %}
-        <div class="condor-form-section">
-            <h2>Datos de usuario</h2>
-            <div class="row g-3">
-                {% for field in form %}
-                    {% if field.name == "nombre" or field.name == "tipo_de_documento" or field.name == "numero_de_documento" or field.name == "correo" %}
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text">{{ field.help_text }}</div>
-                            {% endif %}
-                            {{ field.errors }}
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
+    <div class="condor-form-section">
+        <h2>Datos de usuario</h2>
+        <div class="row g-3">
+            {% for field in form %}
+                {% if field.name == "nombre" or field.name == "tipo_de_documento" or field.name == "numero_de_documento" or field.name == "correo" %}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {{ field.errors }}
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
-    {% endif %}
+    </div>
 
     <div class="condor-form-section">
-        <h2>Datos académicos</h2>
+        <h2>Datos docentes</h2>
         <div class="row g-3">
             {% for field in form %}
                 {% if field.name != "nombre" and field.name != "tipo_de_documento" and field.name != "numero_de_documento" and field.name != "correo" %}
@@ -72,12 +70,13 @@
             {% endfor %}
         </div>
     </div>
+
     <div class="d-flex flex-wrap gap-2 mt-4">
         <button class="btn btn-primary" type="submit">
             <i class="bi bi-person-plus"></i>
-            {{ submit_label|default:"Guardar estudiante" }}
+            {{ submit_label|default:"Guardar profesor" }}
         </button>
-        <a class="btn btn-outline-secondary" href="{% url 'academica:estudiante_list' %}">
+        <a class="btn btn-outline-secondary" href="{% url 'academica:profesor_list' %}">
             Cancelar
         </a>
     </div>

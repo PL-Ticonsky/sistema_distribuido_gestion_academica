@@ -3,6 +3,14 @@ from django.http import Http404
 from django.views.generic import ListView, TemplateView
 
 from apps.accounts.access import REPORT_ROLES, RoleRequiredMixin
+from apps.accounts.access_context import (
+    filter_estudiantes_for_user,
+    filter_grupos_for_user,
+    filter_homologaciones_for_user,
+    filter_inscripciones_for_user,
+    filter_matriculas_for_user,
+    filter_profesores_for_user,
+)
 from apps.reportes.services import ejecutar_consulta, listar_consultas
 
 from .models import (
@@ -54,9 +62,13 @@ class ReporteListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
 
     title = ""
     columns = ()
+    access_filter = None
 
     def get_queryset(self):
-        return self.model.objects.all()
+        queryset = self.model.objects.all()
+        if self.access_filter is not None:
+            queryset = self.access_filter(queryset, self.request.user)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -80,6 +92,7 @@ class UsuariosGlobalView(ReporteListView):
 class EstudiantesDetalleView(ReporteListView):
     model = EstudianteDetalle
     title = "Estudiantes"
+    access_filter = staticmethod(filter_estudiantes_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("estudiante", "Estudiante"),
@@ -93,6 +106,7 @@ class EstudiantesDetalleView(ReporteListView):
 class ProfesoresDetalleView(ReporteListView):
     model = ProfesorDetalle
     title = "Profesores"
+    access_filter = staticmethod(filter_profesores_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("profesor", "Profesor"),
@@ -106,6 +120,7 @@ class ProfesoresDetalleView(ReporteListView):
 class GruposDetalleView(ReporteListView):
     model = GrupoDetalle
     title = "Grupos"
+    access_filter = staticmethod(filter_grupos_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("codigo_grupo", "Grupo"),
@@ -120,6 +135,7 @@ class GruposDetalleView(ReporteListView):
 class InscripcionesDetalleView(ReporteListView):
     model = InscripcionDetalle
     title = "Inscripciones"
+    access_filter = staticmethod(filter_inscripciones_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("estudiante", "Estudiante"),
@@ -134,6 +150,7 @@ class InscripcionesDetalleView(ReporteListView):
 class MatriculasDetalleView(ReporteListView):
     model = MatriculaDetalle
     title = "Matriculas"
+    access_filter = staticmethod(filter_matriculas_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("estudiante", "Estudiante"),
@@ -148,6 +165,7 @@ class MatriculasDetalleView(ReporteListView):
 class HomologacionesGlobalView(ReporteListView):
     model = HomologacionGlobal
     title = "Homologaciones"
+    access_filter = staticmethod(filter_homologaciones_for_user)
     columns = (
         ("nodo_origen", "Nodo"),
         ("asignatura_origen", "Asignatura origen"),

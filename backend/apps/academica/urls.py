@@ -12,7 +12,9 @@ from apps.academica.views import (
     GrupoCreateView,
     GrupoDetailView,
     GrupoListView,
+    GruposAsignaturaListView,
     GrupoUpdateView,
+    HistorialAcademicoView,
     InscripcionCancelView,
     InscripcionCreateView,
     InscripcionDetailView,
@@ -23,6 +25,7 @@ from apps.academica.views import (
     NotaInscripcionUpdateView,
     PlanEstudiosListView,
     PreRequisitoListView,
+    ProfesorCreateView,
     ProfesorDetailView,
     ProfesorListView,
 )
@@ -32,9 +35,24 @@ app_name = "academica"
 urlpatterns = [
     path("asignaturas/", AsignaturaListView.as_view(), name="asignatura_list"),
     path(
+        "asignaturas/<str:cod_asignatura>/grupos/",
+        GruposAsignaturaListView.as_view(),
+        name="asignatura_grupos",
+    ),
+    path(
         "asignaturas/<str:cod_asignatura>/",
         AsignaturaDetailView.as_view(),
         name="asignatura_detail",
+    ),
+    path(
+        "plan-estudios/",
+        PlanEstudiosListView.as_view(),
+        name="plan_estudios_actual",
+    ),
+    path(
+        "plan-estudios/<uuid:id_programa_asignatura>/grupos/",
+        GruposAsignaturaListView.as_view(),
+        name="plan_asignatura_grupos",
     ),
     path("planes/", PlanEstudiosListView.as_view(), name="plan_estudios_list"),
     path("prerrequisitos/", PreRequisitoListView.as_view(), name="prerequisito_list"),
@@ -65,7 +83,13 @@ urlpatterns = [
         name="estudiante_deactivate",
     ),
     path("docentes/", ProfesorListView.as_view(), name="profesor_list"),
+    path("docentes/crear/", ProfesorCreateView.as_view(), name="profesor_create"),
     path("profesores/", ProfesorListView.as_view(), name="profesor_list_alias"),
+    path(
+        "profesores/crear/",
+        ProfesorCreateView.as_view(),
+        name="profesor_create_alias",
+    ),
     path(
         "docentes/<uuid:id_profesor>/",
         ProfesorDetailView.as_view(),
@@ -85,6 +109,16 @@ urlpatterns = [
         name="grupo_cancel",
     ),
     path("inscripciones/", InscripcionListView.as_view(), name="inscripcion_list"),
+    path(
+        "mis-inscripciones/",
+        InscripcionListView.as_view(),
+        name="mis_inscripciones",
+    ),
+    path(
+        "mi-historial/",
+        HistorialAcademicoView.as_view(),
+        name="historial_academico",
+    ),
     path(
         "inscripciones/crear/",
         InscripcionCreateView.as_view(),

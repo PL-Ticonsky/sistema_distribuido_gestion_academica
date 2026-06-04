@@ -3,17 +3,40 @@
 {% block title %}Docentes{% endblock %}
 
 {% block content %}
-<h1>Docentes</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">Docentes</h1>
+        <p class="text-muted mb-0">Lectura consolidada desde reportes.vw_profesores_detalle.</p>
+    </div>
+    {% if can_create_professors %}
+        <a class="btn btn-primary" href="{% url 'academica:profesor_create' %}">
+            <i class="bi bi-person-plus"></i>
+            Crear profesor
+        </a>
+    {% endif %}
+</div>
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="nombre_facultad" value="{{ active_filters.nombre_facultad }}" placeholder="Facultad">
+        <select class="form-select" name="id_facultad">
+            {% for value, label in facultad_choices %}
+                <option value="{{ value }}" {% if active_filters.id_facultad == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="categoria" value="{{ active_filters.categoria }}" placeholder="Categoria">
+        <select class="form-select" name="categoria">
+            {% for value, label in categoria_choices %}
+                <option value="{{ value }}" {% if active_filters.categoria == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="vinculacion" value="{{ active_filters.vinculacion }}" placeholder="Vinculacion">
+        <select class="form-select" name="vinculacion">
+            {% for value, label in vinculacion_choices %}
+                <option value="{{ value }}" {% if active_filters.vinculacion == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>

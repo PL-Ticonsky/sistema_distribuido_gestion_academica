@@ -5,6 +5,11 @@ from django.urls import reverse_lazy
 from django.views.generic import DetailView, FormView, ListView, TemplateView
 
 from apps.accounts.access import FINANCIAL_ROLES, RoleRequiredMixin
+from apps.accounts.access_context import (
+    filter_matriculas_for_user,
+    filter_recibos_for_user,
+    filter_tarifas_for_user,
+)
 from apps.auditoria.services import registrar_auditoria
 from apps.financiera.forms import (
     MatriculaForm,
@@ -16,15 +21,27 @@ from apps.financiera.forms import (
     user_can_manage_financial,
 )
 from apps.financiera.models import MatriculaDetalle, Recibo, TarifaMatricula
+from apps.reportes.choices import (
+    distinct_choices,
+    estudiante_labels,
+    facultad_choices,
+    facultad_labels,
+    periodo_choices,
+    programa_choices,
+    recibo_labels,
+)
 
 
 class FinancialReadOnlyListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     allowed_roles = FINANCIAL_ROLES
     paginate_by = 25
     filters = ()
+    access_filter = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.access_filter is not None:
+            queryset = self.access_filter(queryset, self.request.user)
         for field in self.filters:
             value = self.request.GET.get(field)
             if value:
@@ -43,6 +60,11 @@ class FinancialReadOnlyListView(LoginRequiredMixin, RoleRequiredMixin, ListView)
 class FinancialManageMixin(LoginRequiredMixin, RoleRequiredMixin):
     allowed_roles = FINANCIAL_ROLES
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def dispatch(self, request, *args, **kwargs):
         if not user_can_manage_financial(request.user):
             messages.error(request, "No tienes permisos para modificar financiera.")
@@ -55,13 +77,31 @@ class TarifaMatriculaListView(FinancialReadOnlyListView):
     template_name = "financiera/tarifa_list.html"
     context_object_name = "tarifas"
     filters = ("id_facultad", "programa_academico_id", "periodo_academico_id", "estado")
+    access_filter = staticmethod(filter_tarifas_for_user)
 
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        return filter_tarifas_for_user(
+            super().get_queryset(),
+            self.request.user,
+        ).select_related(
             "programa_academico",
             "programa_academico__facultad",
             "periodo_academico",
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            TarifaMatricula,
+            "estado",
+            "Todos los estados",
+        )
+        return context
 
 
 class TarifaMatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -115,7 +155,7 @@ class TarifaMatriculaUpdateView(FinancialManageMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         self.tarifa = get_object_or_404(
-            TarifaMatricula,
+            filter_tarifas_for_user(TarifaMatricula.objects.all(), request.user),
             pk=kwargs["id_tarifa_matricula"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -153,7 +193,7 @@ class TarifaMatriculaDeactivateView(FinancialManageMixin, TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.tarifa = get_object_or_404(
-            TarifaMatricula,
+            filter_tarifas_for_user(TarifaMatricula.objects.all(), request.user),
             pk=kwargs["id_tarifa_matricula"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -184,21 +224,7 @@ class ReciboListView(FinancialReadOnlyListView):
     template_name = "financiera/recibo_list.html"
     context_object_name = "recibos"
     filters = ("id_facultad", "tarifa_matricula__periodo_academico_id", "estado_pago")
-
-    def get_queryset(self):
-        return super().get_queryset().select_related(
-            "tarifa_matricula",
-            "tarifa_matricula__programa_academico",
-            "tarifa_matricula__periodo_academico",
-        )
-
-
-class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
-    allowed_roles = FINANCIAL_ROLES
-    model = Recibo
-    template_name = "financiera/recibo_detail.html"
-    context_object_name = "recibo"
-    pk_url_kwarg = "id_recibo"
+    access_filter = staticmethod(filter_recibos_for_user)
 
     def get_queryset(self):
         return super().get_queryset().select_related(
@@ -209,7 +235,49 @@ class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["periodo_choices"] = periodo_choices()
+        context["estado_choices"] = distinct_choices(
+            Recibo,
+            "estado_pago",
+            "Todos los estados",
+        )
+        labels = estudiante_labels(
+            [recibo.id_estudiante for recibo in context["recibos"]],
+        )
+        faculties = facultad_labels(
+            [recibo.id_facultad for recibo in context["recibos"]],
+        )
+        for recibo in context["recibos"]:
+            recibo.estudiante_label = labels.get(recibo.id_estudiante)
+            recibo.facultad_label = faculties.get(recibo.id_facultad)
+        return context
+
+
+class ReciboDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
+    allowed_roles = FINANCIAL_ROLES
+    model = Recibo
+    template_name = "financiera/recibo_detail.html"
+    context_object_name = "recibo"
+    pk_url_kwarg = "id_recibo"
+
+    def get_queryset(self):
+        return filter_recibos_for_user(
+            super().get_queryset(),
+            self.request.user,
+        ).select_related(
+            "tarifa_matricula",
+            "tarifa_matricula__programa_academico",
+            "tarifa_matricula__periodo_academico",
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context["can_manage_financial"] = user_can_manage_financial(self.request.user)
+        labels = estudiante_labels([self.object.id_estudiante])
+        faculties = facultad_labels([self.object.id_facultad])
+        context["estudiante_label"] = labels.get(self.object.id_estudiante)
+        context["facultad_label"] = faculties.get(self.object.id_facultad)
         return context
 
 
@@ -243,7 +311,10 @@ class ReciboUpdateView(FinancialManageMixin, FormView):
     success_url = reverse_lazy("financiera:recibo_list")
 
     def dispatch(self, request, *args, **kwargs):
-        self.recibo = get_object_or_404(Recibo, pk=kwargs["id_recibo"])
+        self.recibo = get_object_or_404(
+            filter_recibos_for_user(Recibo.objects.all(), request.user),
+            pk=kwargs["id_recibo"],
+        )
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
@@ -278,7 +349,10 @@ class ReciboAnularView(FinancialManageMixin, TemplateView):
     template_name = "financiera/recibo_confirm_anular.html"
 
     def dispatch(self, request, *args, **kwargs):
-        self.recibo = get_object_or_404(Recibo, pk=kwargs["id_recibo"])
+        self.recibo = get_object_or_404(
+            filter_recibos_for_user(Recibo.objects.all(), request.user),
+            pk=kwargs["id_recibo"],
+        )
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -306,15 +380,33 @@ class MatriculaListView(FinancialReadOnlyListView):
     model = MatriculaDetalle
     template_name = "financiera/matricula_list.html"
     context_object_name = "matriculas"
+    access_filter = staticmethod(filter_matriculas_for_user)
     filters = (
         "id_facultad",
-        "nombre_facultad",
         "id_programa_academico",
-        "nombre_programa",
         "id_periodo_academico",
         "estado_pago",
         "estado_matricula",
     )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["facultad_choices"] = facultad_choices()
+        context["programa_choices"] = programa_choices(
+            self.request.GET.get("id_facultad"),
+        )
+        context["periodo_choices"] = periodo_choices()
+        context["estado_pago_choices"] = distinct_choices(
+            MatriculaDetalle,
+            "estado_pago",
+            "Todos los pagos",
+        )
+        context["estado_matricula_choices"] = distinct_choices(
+            MatriculaDetalle,
+            "estado_matricula",
+            "Todas las matriculas",
+        )
+        return context
 
 
 class MatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -324,9 +416,14 @@ class MatriculaDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     context_object_name = "matricula"
     pk_url_kwarg = "id_matricula"
 
+    def get_queryset(self):
+        return filter_matriculas_for_user(super().get_queryset(), self.request.user)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_manage_financial"] = user_can_manage_financial(self.request.user)
+        labels = recibo_labels([self.object.id_recibo])
+        context["recibo_label"] = labels.get(self.object.id_recibo)
         return context
 
 
@@ -361,7 +458,7 @@ class MatriculaUpdateView(FinancialManageMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         self.matricula = get_object_or_404(
-            MatriculaDetalle,
+            filter_matriculas_for_user(MatriculaDetalle.objects.all(), request.user),
             pk=kwargs["id_matricula"],
         )
         return super().dispatch(request, *args, **kwargs)
@@ -399,7 +496,7 @@ class MatriculaCancelarView(FinancialManageMixin, TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.matricula = get_object_or_404(
-            MatriculaDetalle,
+            filter_matriculas_for_user(MatriculaDetalle.objects.all(), request.user),
             pk=kwargs["id_matricula"],
         )
         return super().dispatch(request, *args, **kwargs)

@@ -20,12 +20,10 @@
 </div>
 
 <dl class="row">
-    <dt>ID recibo</dt>
-    <dd>{{ recibo.id_recibo }}</dd>
     <dt>Estudiante</dt>
-    <dd>{{ recibo.id_estudiante }}</dd>
+    <dd>{{ estudiante_label|default:"Estudiante no disponible" }}</dd>
     <dt>Facultad</dt>
-    <dd>{{ recibo.id_facultad }}</dd>
+    <dd>{{ facultad_label|default:recibo.id_facultad }}</dd>
     <dt>Programa tarifado</dt>
     <dd>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</dd>
     <dt>Periodo</dt>

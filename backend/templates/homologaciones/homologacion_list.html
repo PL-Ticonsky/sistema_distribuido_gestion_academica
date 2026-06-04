@@ -8,7 +8,7 @@
         <h1 class="mb-1">Homologaciones</h1>
         <p class="mb-0">Lectura consolidada desde reportes.vw_homologaciones_global.</p>
     </div>
-    {% if can_write_homologaciones %}
+    {% if can_create_homologaciones %}
         <a class="btn btn-primary" href="{% url 'homologaciones:homologacion_create' %}">
             <i class="bi bi-plus-circle"></i>
             Crear homologacion
@@ -18,10 +18,18 @@
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-2">
-        <input class="form-control" type="text" name="id_facultad" value="{{ active_filters.id_facultad }}" placeholder="Facultad">
+        <select class="form-select" name="id_facultad">
+            {% for value, label in facultad_choices %}
+                <option value="{{ value }}" {% if active_filters.id_facultad == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="estado_homologacion" value="{{ active_filters.estado_homologacion }}" placeholder="Estado">
+        <select class="form-select" name="estado_homologacion">
+            {% for value, label in estado_choices %}
+                <option value="{{ value }}" {% if active_filters.estado_homologacion == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
         <input class="form-control" type="date" name="fecha_solicitud" value="{{ active_filters.fecha_solicitud }}">
@@ -57,9 +65,9 @@
                     </a>
                 </td>
                 <td>{{ homologacion.institucion_origen|default:"-" }}</td>
-                <td>{{ homologacion.id_facultad|default:"-" }}</td>
-                <td>{{ homologacion.id_estudiante|default:"-" }}</td>
-                <td>{{ homologacion.id_profesor_evaluador|default:"-" }}</td>
+                <td>{{ homologacion.facultad_label|default:homologacion.id_facultad|default:"-" }}</td>
+                <td>{{ homologacion.estudiante_label|default:"-" }}</td>
+                <td>{{ homologacion.profesor_label|default:"-" }}</td>
                 <td>{{ homologacion.fecha_solicitud }}</td>
                 <td>
                     <span class="condor-status {% if homologacion.estado_homologacion == 'Aprobada' %}is-success{% elif homologacion.estado_homologacion == 'Rechazada' or homologacion.estado_homologacion == 'Cancelada' %}is-danger{% elif homologacion.estado_homologacion == 'En revision' %}is-warning{% else %}is-info{% endif %}">
@@ -72,16 +80,22 @@
                         <a class="btn btn-outline-secondary" href="{% url 'homologaciones:homologacion_detail' homologacion.id_homologacion %}">
                             Ver
                         </a>
-                        {% if can_write_homologaciones %}
+                        {% if can_edit_homologaciones %}
                             <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_update' homologacion.id_homologacion %}">
                                 Editar
                             </a>
+                        {% endif %}
+                        {% if can_assign_homologaciones %}
                             <a class="btn btn-outline-primary" href="{% url 'homologaciones:homologacion_assign_evaluator' homologacion.id_homologacion %}">
                                 Evaluador
                             </a>
+                        {% endif %}
+                        {% if can_evaluate_homologaciones %}
                             <a class="btn btn-outline-success" href="{% url 'homologaciones:homologacion_evaluate' homologacion.id_homologacion %}">
                                 Evaluar
                             </a>
+                        {% endif %}
+                        {% if can_cancel_homologaciones %}
                             <a class="btn btn-outline-danger" href="{% url 'homologaciones:homologacion_cancel' homologacion.id_homologacion %}">
                                 Cancelar
                             </a>

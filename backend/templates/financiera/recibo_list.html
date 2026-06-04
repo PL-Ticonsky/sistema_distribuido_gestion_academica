@@ -15,13 +15,25 @@
 
 <form class="row g-2 mb-3" method="get">
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="id_facultad" value="{{ active_filters.id_facultad }}" placeholder="Facultad">
+        <select class="form-select" name="id_facultad">
+            {% for value, label in facultad_choices %}
+                <option value="{{ value }}" {% if active_filters.id_facultad == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="tarifa_matricula__periodo_academico_id" value="{{ active_filters.tarifa_matricula__periodo_academico_id }}" placeholder="Periodo">
+        <select class="form-select" name="tarifa_matricula__periodo_academico_id">
+            {% for value, label in periodo_choices %}
+                <option value="{{ value }}" {% if active_filters.tarifa_matricula__periodo_academico_id == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-3">
-        <input class="form-control" type="text" name="estado_pago" value="{{ active_filters.estado_pago }}" placeholder="Estado pago">
+        <select class="form-select" name="estado_pago">
+            {% for value, label in estado_choices %}
+                <option value="{{ value }}" {% if active_filters.estado_pago == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="col-12 col-md-auto">
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>
@@ -47,8 +59,8 @@
     <tbody>
         {% for recibo in recibos %}
             <tr>
-                <td>{{ recibo.id_estudiante }}</td>
-                <td>{{ recibo.id_facultad }}</td>
+                <td>{{ recibo.estudiante_label|default:"Estudiante no disponible" }}</td>
+                <td>{{ recibo.facultad_label|default:recibo.id_facultad }}</td>
                 <td>{{ recibo.tarifa_matricula.programa_academico.nombre_programa }}</td>
                 <td>{{ recibo.tarifa_matricula.periodo_academico.id_periodo_academico }}</td>
                 <td>
