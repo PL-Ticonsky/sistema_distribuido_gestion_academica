@@ -1,56 +1,258 @@
-# Sistema Distribuido de Gestión Académica Universitaria
+<div align="center">
 
-Aplicación web académica construida con Django y PostgreSQL para gestionar procesos universitarios como autenticación por roles, estructura institucional, oferta académica, inscripciones, notas, homologaciones, matrícula financiera, indicadores académicos y auditoría.
+  <img src="backend/media/ChatGPT Image Jun 3, 2026, 06_11_27 PM (1).png" alt="Cóndor SGA" width="180"/>
 
-El proyecto conserva un modelo relacional existente en PostgreSQL y lo integra con Django mediante modelos no administrados (`managed = False`) para respetar la estructura de base de datos definida en los scripts SQL.
 
-## Estado Del Proyecto
+  # Sistema Distribuido de Gestión Académica Universitaria
 
-- Backend Django funcional con autenticación por correo.
-- Roles funcionales implementados mediante grupos de Django.
-- Permisos y alcance de datos por rol.
-- Templates Django con interfaz institucional beige/café.
+  **Aplicación web académica construida con Django y PostgreSQL para la gestión integral de procesos universitarios en una arquitectura orientada a distribución por facultades.**
+
+  <br/>
+
+  ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+  ![Django](https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white)
+  ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+  ![uv](https://img.shields.io/badge/uv-package%20manager-261230?style=for-the-badge)
+  ![Ruff](https://img.shields.io/badge/Ruff-linting-D7FF64?style=for-the-badge)
+  ![pytest](https://img.shields.io/badge/pytest-testing-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+
+</div>
+
+---
+
+## Descripción
+
+Este repositorio contiene el desarrollo final de un **Sistema Distribuido de Gestión Académica Universitaria**, diseñado para administrar procesos académicos, financieros y administrativos dentro de una institución organizada por facultades.
+
+El sistema permite gestionar:
+
+- Autenticación institucional por correo.
+- Usuarios y roles funcionales.
+- Facultades y programas académicos.
+- Asignaturas, planes de estudio y prerrequisitos.
+- Grupos académicos por periodo.
+- Inscripciones y notas.
+- Matrículas, recibos y tarifas.
+- Homologaciones académicas.
+- Indicadores académicos.
+- Auditoría operativa.
+- Alcance de datos según rol.
+
+El proyecto conserva un modelo relacional definido en PostgreSQL y lo integra con Django mediante modelos no administrados, respetando la estructura SQL construida durante el desarrollo académico.
+
+---
+
+## Identidad Visual
+
+La interfaz adopta una identidad institucional basada en el concepto visual del **cóndor caído**, usado como elemento gráfico principal del sistema.
+
+La línea visual del proyecto utiliza una paleta sobria en tonos:
+
+- Beige.
+- Arena.
+- Crema.
+- Café.
+- Negro institucional.
+
+El frontend fue construido con Django Templates, Bootstrap 5, Bootstrap Icons y estilos propios centralizados.
+
+---
+
+## Tabla de Contenido
+
+- [Sistema Distribuido de Gestión Académica Universitaria](#sistema-distribuido-de-gestión-académica-universitaria)
+  - [Descripción](#descripción)
+  - [Identidad Visual](#identidad-visual)
+  - [Tabla de Contenido](#tabla-de-contenido)
+  - [Estado del Proyecto](#estado-del-proyecto)
+  - [Características Principales](#características-principales)
+    - [Gestión académica](#gestión-académica)
+    - [Gestión financiera](#gestión-financiera)
+    - [Homologaciones](#homologaciones)
+    - [Indicadores](#indicadores)
+    - [Auditoría](#auditoría)
+  - [Arquitectura General](#arquitectura-general)
+  - [Tecnologías](#tecnologías)
+  - [Módulos Funcionales](#módulos-funcionales)
+  - [Roles del Sistema](#roles-del-sistema)
+  - [Estructura del Repositorio](#estructura-del-repositorio)
+  - [Configuración Local](#configuración-local)
+    - [1. Requisitos previos](#1-requisitos-previos)
+    - [2. Clonar el repositorio](#2-clonar-el-repositorio)
+    - [3. Instalar dependencias](#3-instalar-dependencias)
+    - [4. Crear archivo `.env`](#4-crear-archivo-env)
+  - [Base de Datos](#base-de-datos)
+    - [Flujo recomendado para una base local limpia](#flujo-recomendado-para-una-base-local-limpia)
+  - [Ejecución](#ejecución)
+  - [Usuarios Demo](#usuarios-demo)
+  - [Rutas Principales](#rutas-principales)
+  - [Frontend](#frontend)
+  - [Calidad y Validación](#calidad-y-validación)
+  - [Decisiones Técnicas](#decisiones-técnicas)
+    - [Modelo SQL-first](#modelo-sql-first)
+    - [Modelos no administrados](#modelos-no-administrados)
+    - [Autenticación personalizada](#autenticación-personalizada)
+    - [Separación entre permisos y alcance](#separación-entre-permisos-y-alcance)
+    - [Seguridad desde base de datos y aplicación](#seguridad-desde-base-de-datos-y-aplicación)
+  - [Documentación](#documentación)
+  - [Seguridad](#seguridad)
+  - [Alcance Actual](#alcance-actual)
+  - [Roadmap](#roadmap)
+  - [Autores](#autores)
+
+---
+
+## Estado del Proyecto
+
+El sistema se encuentra en una versión funcional de cierre académico.
+
+Actualmente incluye:
+
+- Backend Django operativo.
+- Autenticación por correo electrónico.
+- Usuario personalizado con integración al sistema de grupos de Django.
+- Roles funcionales implementados.
+- Alcance de datos por rol.
+- Templates institucionales.
 - Sidebar colapsable con persistencia en `localStorage`.
-- Scripts SQL separados para DDL, catálogos, datos operativos y validaciones.
-- Comandos locales para crear grupos funcionales y usuarios demo.
+- Dashboard adaptado por usuario.
+- Scripts SQL separados por propósito.
+- Datos demo para validación.
+- Comandos de carga inicial.
+- Documentación técnica y académica.
+- Validaciones con Ruff, pytest y comandos de Django.
+
+---
+
+## Características Principales
+
+### Gestión académica
+
+- Registro y consulta de facultades.
+- Administración de programas académicos.
+- Gestión de asignaturas.
+- Planes de estudio por programa.
+- Prerrequisitos.
+- Grupos académicos por periodo.
+- Inscripciones.
+- Notas parciales y nota final.
+
+### Gestión financiera
+
+- Tarifas de matrícula.
+- Recibos por estudiante.
+- Estados de pago.
+- Matrículas académicas.
+- Separación entre proceso financiero y proceso académico-administrativo.
+
+### Homologaciones
+
+- Solicitud de homologaciones.
+- Asignación de profesor evaluador.
+- Evaluación académica.
+- Registro de institución y asignatura de origen.
+- Control de estado de solicitud.
+
+### Indicadores
+
+- Promedio académico.
+- Avance de carrera.
+- Materias aprobadas.
+- Materias pendientes.
+- Riesgo académico.
+- Consultas derivadas sin almacenar métricas redundantes.
+
+### Auditoría
+
+- Registro de acciones relevantes.
+- Consulta de trazabilidad operativa.
+- Control institucional sobre operaciones del sistema.
+
+---
+
+## Arquitectura General
+
+El sistema sigue una arquitectura web tradicional basada en Django, conectada a PostgreSQL como motor relacional principal.
+
+```text
+Usuario
+  │
+  ▼
+Interfaz Web Django Templates
+  │
+  ▼
+Vistas Django
+  │
+  ▼
+Servicios de acceso y alcance por rol
+  │
+  ▼
+Modelos Django no administrados
+  │
+  ▼
+PostgreSQL
+  │
+  ├── Modelo académico
+  ├── Modelo financiero
+  ├── Modelo de homologaciones
+  ├── Modelo de auditoría
+  └── Tablas internas de autenticación Django
+```
+
+La arquitectura del proyecto fue pensada para evolucionar hacia un esquema distribuido por facultades, permitiendo que cada facultad administre su información académica local y que la institución mantenga consultas consolidadas.
+
+---
 
 ## Tecnologías
 
 | Componente | Tecnología |
 |---|---|
 | Lenguaje | Python 3.12+ |
-| Framework web | Django 5 |
+| Framework web | Django 5.x |
 | Base de datos | PostgreSQL |
-| Conector PostgreSQL | psycopg |
-| Configuración | django-environ |
-| Frontend | Django Templates, Bootstrap 5, Bootstrap Icons, CSS propio |
-| Calidad | Ruff, pytest, pytest-django |
-| Gestión de entorno | uv |
+| Driver PostgreSQL | psycopg |
+| Variables de entorno | django-environ |
+| Frontend | Django Templates |
+| UI | Bootstrap 5 |
+| Iconografía | Bootstrap Icons |
+| Estilos | CSS propio |
+| Testing | pytest, pytest-django |
+| Linting y formato | Ruff |
+| Gestión de dependencias | uv |
+| Administración SQL | DBeaver / psql |
+
+---
 
 ## Módulos Funcionales
 
 | App | Responsabilidad |
 |---|---|
-| `accounts` | Usuario personalizado, login/logout, dashboard, roles y alcance funcional. |
+| `accounts` | Usuario personalizado, login, logout, dashboard, roles y alcance funcional. |
 | `estructura` | Facultades, programas académicos y periodos. |
 | `academica` | Asignaturas, planes, prerrequisitos, docentes, grupos, inscripciones y notas. |
 | `financiera` | Tarifas, recibos y matrículas. |
 | `homologaciones` | Solicitudes, asignación de evaluador, evaluación y cancelación. |
-| `indicadores` | Avance académico, promedio, materias faltantes y riesgo. |
+| `indicadores` | Avance académico, promedio, materias faltantes y riesgo académico. |
 | `auditoria` | Consulta de trazabilidad operativa. |
 
-## Roles Soportados
+---
 
-- Estudiante
-- Docente
-- Coordinador
-- Decano
-- Administrativo
-- Superadmin / administrador funcional
+## Roles del Sistema
 
-La navegación, los listados y las acciones disponibles se filtran según el rol y el alcance del usuario autenticado.
+El sistema implementa navegación, permisos y alcance de información según el rol del usuario autenticado.
 
-## Estructura Del Repositorio
+| Rol | Alcance funcional |
+|---|---|
+| Estudiante | Consulta de información académica propia, inscripciones, notas, matrícula e indicadores personales. |
+| Docente | Consulta de grupos asignados y gestión académica asociada. |
+| Coordinador | Gestión académica sobre un programa específico. |
+| Decano | Consulta y supervisión sobre una facultad. |
+| Administrativo | Apoyo a procesos financieros y administrativos. |
+| Administrador funcional | Gestión general del sistema y datos institucionales. |
+
+---
+
+## Estructura del Repositorio
 
 ```text
 .
@@ -64,36 +266,67 @@ La navegación, los listados y las acciones disponibles se filtran según el rol
 │   │   ├── homologaciones/
 │   │   └── indicadores/
 │   ├── config/
+│   ├── media/
 │   ├── static/
-│   │   ├── css/
-│   │   └── js/
 │   ├── templates/
+│   ├── tests/
 │   └── manage.py
+├── backups/
 ├── docs/
 ├── sql/
+├── .env.example
+├── .gitignore
+├── .python-version
 ├── pyproject.toml
 ├── requirements.txt
-└── uv.lock
+├── uv.lock
+└── README.md
 ```
+
+---
 
 ## Configuración Local
 
-### 1. Requisitos
+### 1. Requisitos previos
 
-- Python 3.12 o superior
-- PostgreSQL instalado y en ejecución
-- `uv` instalado
-- DBeaver u otra herramienta SQL para ejecutar scripts manuales
+Antes de ejecutar el proyecto se requiere:
 
-### 2. Instalar Dependencias
+- Python 3.12 o superior.
+- PostgreSQL instalado y activo.
+- `uv` instalado.
+- DBeaver, pgAdmin o `psql` para ejecutar scripts SQL.
+- Git.
+
+---
+
+### 2. Clonar el repositorio
+
+```bash
+git clone <url-del-repositorio>
+cd <nombre-del-repositorio>
+```
+
+---
+
+### 3. Instalar dependencias
 
 ```bash
 uv sync
 ```
 
-### 3. Crear Archivo `.env`
+También puede instalarse desde `requirements.txt` en entornos tradicionales:
 
-Crear un archivo `.env` en la raíz del proyecto:
+```bash
+pip install -r requirements.txt
+```
+
+Sin embargo, el flujo recomendado del proyecto es usar `uv`.
+
+---
+
+### 4. Crear archivo `.env`
+
+Crear un archivo `.env` en la raíz del proyecto tomando como referencia `.env.example`.
 
 ```env
 DJANGO_SECRET_KEY=change-me-local
@@ -108,64 +341,87 @@ POSTGRES_PORT=5432
 POSTGRES_SSLMODE=prefer
 ```
 
-No versionar credenciales reales. El archivo `.env` debe ser local.
+> No se deben versionar credenciales reales. El archivo `.env` debe permanecer local.
 
-## Base De Datos
+---
 
-Los scripts SQL están en `sql/` y se deben ejecutar en orden según el ambiente local:
+## Base de Datos
+
+El proyecto usa PostgreSQL como motor principal.
+
+Los scripts SQL se encuentran en la carpeta `sql/`.
 
 | Archivo | Propósito |
 |---|---|
-| `sql/01_ddl.sql` | Crea tablas y restricciones principales. |
-| `sql/02_inserts_catalogos.sql` | Carga catálogos base. |
-| `sql/03_inserts_operativos.sql` | Carga datos operativos de prueba. |
-| `sql/04_consultas_validacion.sql` | Consultas para validar datos y reglas. |
-| `sql/09_auth_user_m2m_tables.sql` | Tablas M2M requeridas por grupos/permisos de Django para el usuario personalizado. |
+| `sql/01_ddl.sql` | Creación de tablas, claves, restricciones y estructura principal. |
+| `sql/02_inserts_catalogos.sql` | Carga de catálogos institucionales. |
+| `sql/03_inserts_operativos.sql` | Carga de datos operativos de prueba. |
+| `sql/04_consultas_validacion.sql` | Consultas de validación del modelo. |
+| `sql/09_auth_user_m2m_tables.sql` | Tablas M2M requeridas para grupos y permisos de Django con usuario personalizado. |
 
-Flujo recomendado para una base local limpia:
+---
 
-```text
-sql/01_ddl.sql
-sql/02_inserts_catalogos.sql
-sql/03_inserts_operativos.sql
+### Flujo recomendado para una base local limpia
+
+Crear la base de datos:
+
+```bash
+createdb gestion_academica_local
 ```
 
-Luego crear las tablas internas de Django:
+Ejecutar los scripts SQL principales:
+
+```bash
+psql -d gestion_academica_local -f sql/01_ddl.sql
+psql -d gestion_academica_local -f sql/02_inserts_catalogos.sql
+psql -d gestion_academica_local -f sql/03_inserts_operativos.sql
+```
+
+Ejecutar migraciones internas de Django:
 
 ```bash
 uv run python backend/manage.py migrate
 ```
 
-Después ejecutar en PostgreSQL:
+Ejecutar tablas M2M de autenticación personalizada:
 
-```text
-sql/09_auth_user_m2m_tables.sql
+```bash
+psql -d gestion_academica_local -f sql/09_auth_user_m2m_tables.sql
 ```
 
-Finalmente crear grupos y usuarios demo:
+Crear grupos funcionales:
 
 ```bash
 uv run python backend/manage.py setup_functional_groups
+```
+
+Crear usuarios demo:
+
+```bash
 uv run python backend/manage.py seed_demo_users
 ```
 
-> Nota: el orden exacto puede depender del estado de la base local. La documentación técnica en `docs/` contiene las validaciones detalladas del DDL e inserts.
+---
 
-## Ejecutar La Aplicación
+## Ejecución
+
+Iniciar el servidor local:
 
 ```bash
 uv run python backend/manage.py runserver
 ```
 
-Abrir:
+Abrir en el navegador:
 
 ```text
 http://127.0.0.1:8000/login/
 ```
 
+---
+
 ## Usuarios Demo
 
-Contraseña demo para todos:
+La contraseña demo para todos los usuarios es:
 
 ```text
 Demo12345*
@@ -180,7 +436,9 @@ Demo12345*
 | Decano | `laura.perez@universidad.edu` |
 | Administrativo | `hector.suarez@universidad.edu` |
 
-Estas credenciales son ficticias y solo sirven para desarrollo local.
+> Estas credenciales son ficticias y están destinadas exclusivamente a desarrollo local y validación académica.
+
+---
 
 ## Rutas Principales
 
@@ -204,11 +462,15 @@ Estas credenciales son ficticias y solo sirven para desarrollo local.
 | `/indicadores/` | Indicadores académicos. |
 | `/auditoria/` | Auditoría. |
 
-Algunas rutas redirigen si el usuario no tiene el rol requerido.
+Algunas rutas redirigen automáticamente cuando el usuario autenticado no tiene permisos suficientes.
+
+---
 
 ## Frontend
 
-La interfaz usa Django Templates y CSS centralizado:
+La interfaz está construida con Django Templates y estilos propios.
+
+Archivos principales:
 
 ```text
 backend/templates/base.html
@@ -216,55 +478,120 @@ backend/static/css/condor.css
 backend/static/js/condor.js
 ```
 
-Características:
+Características visuales:
 
-- Identidad visual institucional en tonos beige, crema, arena y café.
+- Login institucional personalizado.
 - Sidebar izquierdo colapsable.
 - Persistencia del estado del sidebar en `localStorage`.
-- Navbar superior con usuario y roles activos.
-- Login rediseñado.
-- Dashboard visual con cards y accesos rápidos.
-- Tablas responsivas con hover y encabezados estilizados.
-- Formularios y detalles con superficies tipo card.
-- Alertas y badges consistentes con la paleta.
+- Navbar superior con usuario autenticado y roles activos.
+- Dashboard con tarjetas y accesos rápidos.
+- Tablas responsivas.
+- Formularios estilizados.
+- Badges y alertas consistentes.
+- Paleta visual beige, café y crema.
+- Uso de imágenes del cóndor como identidad del sistema.
 
-## Comandos De Validación
+---
+
+## Calidad y Validación
+
+Ejecutar validaciones de Django:
 
 ```bash
 uv run python backend/manage.py check
-uv run ruff check backend/apps backend/config
-uv run ruff format --check backend/apps backend/config
-uv run pytest
 ```
 
-Para formatear:
+Ejecutar linting:
+
+```bash
+uv run ruff check backend/apps backend/config
+```
+
+Verificar formato:
+
+```bash
+uv run ruff format --check backend/apps backend/config
+```
+
+Aplicar formato:
 
 ```bash
 uv run ruff format backend/apps backend/config
 ```
 
-## Decisiones Importantes
+Ejecutar pruebas:
 
-- No se debe modificar SQL sin revisar la documentación y el modelo relacional.
-- No se deben crear migraciones para tablas existentes del modelo académico.
-- Los modelos asociados a tablas existentes usan `managed = False`.
-- La lógica de permisos vive en `apps.accounts.access`, `apps.accounts.roles` y `apps.accounts.scope`.
-- Los querysets de cada módulo aplican filtros según rol y alcance.
-- La autenticación usa `accounts.CustomUser` con correo como identificador.
-- Las contraseñas se gestionan con el sistema de hashing de Django.
+```bash
+uv run pytest
+```
+
+---
+
+## Decisiones Técnicas
+
+### Modelo SQL-first
+
+El modelo de datos fue definido primero en PostgreSQL mediante scripts SQL. Django se integra sobre ese modelo sin reemplazarlo.
+
+### Modelos no administrados
+
+Las tablas académicas principales utilizan:
+
+```python
+managed = False
+```
+
+Esto evita que Django intente crear, modificar o eliminar tablas que ya están controladas por los scripts SQL del proyecto.
+
+### Autenticación personalizada
+
+El sistema utiliza un usuario personalizado basado en correo electrónico como identificador principal.
+
+### Separación entre permisos y alcance
+
+La lógica de acceso se divide en:
+
+```text
+apps.accounts.roles
+apps.accounts.access
+apps.accounts.scope
+```
+
+Esto permite diferenciar:
+
+- Qué rol tiene el usuario.
+- Qué acciones puede ejecutar.
+- Qué subconjunto de datos puede consultar.
+
+### Seguridad desde base de datos y aplicación
+
+El diseño combina:
+
+- Restricciones relacionales.
+- Llaves primarias y foráneas.
+- Validaciones SQL.
+- Grupos de Django.
+- Alcance funcional por rol.
+- Separación entre datos propios, datos de programa y datos de facultad.
+
+---
 
 ## Documentación
 
-La carpeta `docs/` contiene el contexto académico y técnico:
+La carpeta `docs/` contiene la documentación técnica y académica del proyecto.
 
-- Reglas de negocio
-- Modelo conceptual y relacional
-- Diccionario de datos
-- Decisiones técnicas para Django
-- Pantallas y flujos
-- Usuarios demo
-- Guía visual
-- Validaciones SQL
+Incluye:
+
+- Reglas de negocio.
+- Modelo conceptual.
+- Modelo relacional.
+- Diccionario de datos.
+- Decisiones técnicas.
+- Guía de pantallas y flujos.
+- Usuarios demo.
+- Guía visual.
+- Validaciones SQL.
+- Manuales de ejecución.
 
 Punto de entrada recomendado:
 
@@ -272,14 +599,71 @@ Punto de entrada recomendado:
 docs/00_readme_documentacion.md
 ```
 
+---
+
 ## Seguridad
 
+Buenas prácticas aplicadas y recomendadas:
+
 - No subir `.env` con credenciales reales.
-- No documentar contraseñas productivas.
-- No hardcodear claves de PostgreSQL, Azure, tokens ni `SECRET_KEY`.
-- Usar credenciales demo únicamente en ambiente local.
-- Configurar `DJANGO_DEBUG=False` y `DJANGO_ALLOWED_HOSTS` explícito fuera de desarrollo.
+- No hardcodear claves, tokens ni contraseñas.
+- No publicar credenciales productivas.
+- Usar usuarios demo únicamente en entorno local.
+- Configurar `DJANGO_DEBUG=False` fuera de desarrollo.
+- Definir explícitamente `DJANGO_ALLOWED_HOSTS` en ambientes no locales.
+- Revisar permisos de PostgreSQL antes de publicar el sistema.
+- Mantener separadas las credenciales locales y cloud.
+
+---
 
 ## Alcance Actual
 
-El sistema está orientado a una fase local de desarrollo y validación académica. La arquitectura documental contempla una evolución posterior hacia PostgreSQL administrado en la nube, pero el despliegue cloud no forma parte del alcance actual del repositorio.
+Esta versión corresponde a una entrega funcional académica con ejecución local y arquitectura preparada para evolución distribuida.
+
+El sistema incluye:
+
+- Modelo relacional completo.
+- Scripts SQL.
+- Backend Django.
+- Roles funcionales.
+- Interfaz web.
+- Datos demo.
+- Documentación.
+- Validaciones.
+
+La evolución hacia despliegue cloud completo queda preparada como fase posterior del proyecto.
+
+---
+
+## Roadmap
+
+Próximas mejoras sugeridas:
+
+- Despliegue completo en PostgreSQL administrado en la nube.
+- Configuración formal de ambiente productivo.
+- Automatización de carga inicial.
+- Pipeline CI/CD.
+- Pruebas de integración por módulo.
+- Exportación de reportes académicos.
+- Mejoras visuales sobre la identidad del cóndor.
+- Dashboard institucional consolidado.
+- Documentación de despliegue final.
+
+---
+
+## Autores
+
+Proyecto académico desarrollado para la asignatura de Bases de Datos.
+
+**Universidad Distrital Francisco José de Caldas**  
+Facultad de Ingeniería  
+Ingeniería de Sistemas
+
+---
+
+<div align="center">
+
+  **Sistema Distribuido de Gestión Académica Universitaria**  
+  _Diseño relacional, Django, PostgreSQL y arquitectura académica distribuida._
+
+</div>
