@@ -1,34 +1,92 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Iniciar sesion{% endblock %}
+{% block title %}Ingreso institucional{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <span class="condor-role-pill">Acceso institucional</span>
-    <h2 class="mt-3 mb-2">Iniciar sesion</h2>
-    <p class="mb-0">Ingresa con tu correo para acceder al panel academico segun tus roles activos.</p>
-</div>
+<section class="condor-login-shell" aria-labelledby="login-title">
+    <div class="condor-login-panel condor-login-intro">
+        <div class="condor-auth-brand">
+            <span class="condor-brand-mark condor-brand-mark-image">
+                <img src="{% static 'img/brand/condor-caido-mark.png' %}" alt="" aria-hidden="true">
+            </span>
+            <div>
+                <h1 id="login-title">Cóndor Caído</h1>
+                <p>Sistema de Gestión Académica</p>
+            </div>
+        </div>
 
-{% if form.errors %}
-    <div class="alert alert-condor" role="alert">
-        <strong>No pudimos iniciar sesion.</strong>
-        Revisa el correo y la contrasena e intenta nuevamente.
-    </div>
-{% endif %}
+        <figure class="condor-login-hero-image">
+            <img src="{% static 'img/brand/condor-caido-login.png' %}" alt="Ilustración institucional de un cóndor en descenso">
+        </figure>
 
-<form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-        <label class="form-label" for="{{ form.username.id_for_label }}">Correo institucional</label>
-        {{ form.username }}
+        <div class="condor-login-copy">
+            <span class="condor-role-pill">Acceso institucional</span>
+            <h2>Portal académico integrado</h2>
+            <p>
+                Consulta información académica, financiera y administrativa con los
+                permisos asignados a tu perfil institucional.
+            </p>
+        </div>
+
+        <div class="condor-help-grid" aria-label="Servicios institucionales">
+            <a href="#" aria-label="Recuperar contraseña">
+                <i class="bi bi-key"></i>
+                <span>Recuperar contraseña</span>
+            </a>
+            <a href="#" aria-label="Manual de usuario">
+                <i class="bi bi-book"></i>
+                <span>Manual de usuario</span>
+            </a>
+            <a href="#" aria-label="Calendario académico">
+                <i class="bi bi-calendar3"></i>
+                <span>Calendario académico</span>
+            </a>
+            <a href="#" aria-label="Soporte académico">
+                <i class="bi bi-headset"></i>
+                <span>Soporte académico</span>
+            </a>
+        </div>
     </div>
-    <div class="mb-4">
-        <label class="form-label" for="{{ form.password.id_for_label }}">Contrasena</label>
-        {{ form.password }}
+
+    <div class="condor-login-panel condor-login-form-panel">
+        <div class="condor-login-heading">
+            <span class="condor-section-kicker">Ingreso seguro</span>
+            <h2>Iniciar sesión</h2>
+            <p>Usa tu correo institucional y contraseña para acceder.</p>
+        </div>
+
+        {% if form.errors %}
+            <div class="alert alert-condor" role="alert">
+                <strong>No pudimos iniciar sesión.</strong>
+                Revisa el correo y la contraseña e intenta nuevamente.
+            </div>
+        {% endif %}
+
+        <form method="post" class="condor-login-form">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Correo institucional</label>
+                {{ form.username }}
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Contraseña</label>
+                {{ form.password }}
+            </div>
+            <button class="w-100" type="submit">
+                <i class="bi bi-arrow-right-circle me-1"></i>
+                Entrar al sistema
+            </button>
+        </form>
+
+        <aside class="condor-news-box" aria-label="Noticias académicas">
+            <span class="condor-section-kicker">Noticias académicas</span>
+            <h3>Servicios activos para gestión institucional</h3>
+            <p>
+                Los módulos de inscripciones, matrículas, homologaciones, reportes y
+                auditoría están disponibles según el alcance de cada rol.
+            </p>
+        </aside>
     </div>
-    <button class="w-100" type="submit">
-        <i class="bi bi-arrow-right-circle me-1"></i>
-        Entrar al sistema
-    </button>
-</form>
+</section>
 {% endblock %}
