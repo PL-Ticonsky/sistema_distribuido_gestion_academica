@@ -1,13 +1,15 @@
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Count, Max, Q
 
 from apps.academica.distributed_write import (
     create_estudiante,
     create_grupo,
     create_inscripcion,
+    create_profesor,
     update_estudiante,
     update_grupo,
     update_inscripcion,
@@ -16,7 +18,9 @@ from apps.academica.models import Inscripcion
 from apps.accounts.access_context import (
     filter_estudiantes_for_user,
     filter_grupos_for_user,
+    get_access_context,
 )
+from apps.accounts.models import CustomUser
 from apps.accounts.roles import get_user_roles
 from apps.accounts.scope import (
     get_coordinated_program_ids,
@@ -33,9 +37,12 @@ from apps.reportes.models import (
 
 ACTIVE_GROUP_STATES = ("Abierto", "En curso")
 ACTIVE_ENROLLMENT_STATES = ("Cursando", "Aprobada", "Reprobada")
+DEFAULT_INITIAL_PASSWORD = "Demo12345*"
+ACADEMIC_CREATE_ROLES = {"coordinador", "decano", "administrativo", "superadmin"}
 ENROLLMENT_CREATE_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
 ENROLLMENT_EDIT_ROLES = {"docente", "coordinador", "decano", "superadmin"}
 ENROLLMENT_CANCEL_ROLES = {"estudiante", "coordinador", "decano", "superadmin"}
+STUDENT_WRITE_ROLES = {"coordinador", "superadmin"}
 STUDENT_STATUS_CHOICES = (
     ("Activo", "Activo"),
     ("Inactivo", "Inactivo"),
@@ -54,6 +61,17 @@ ENROLLMENT_STATUS_CHOICES = (
     ("Aprobada", "Aprobada"),
     ("Reprobada", "Reprobada"),
     ("Cancelada", "Cancelada"),
+)
+PROFESSOR_CATEGORY_CHOICES = (
+    ("Asistente", "Asistente"),
+    ("Asociado", "Asociado"),
+    ("Titular", "Titular"),
+    ("Auxiliar", "Auxiliar"),
+)
+PROFESSOR_LINK_CHOICES = (
+    ("Planta", "Planta"),
+    ("Ocasional", "Ocasional"),
+    ("Catedra", "Catedra"),
 )
 
 
@@ -77,8 +95,26 @@ def user_can_cancel_enrollments(user):
 
 
 def user_can_create_students(user):
+    context = get_access_context(user)
+    if context.is_superadmin:
+        return True
+    if not context.roles.intersection(ACADEMIC_CREATE_ROLES):
+        return False
+    return bool(context.program_ids or context.faculty_ids)
+
+
+def user_can_write_students(user):
     roles = set(get_user_roles(user))
-    return is_superadmin(user) or "coordinador" in roles
+    return is_superadmin(user) or bool(roles.intersection(STUDENT_WRITE_ROLES))
+
+
+def user_can_create_professors(user):
+    context = get_access_context(user)
+    if context.is_superadmin:
+        return True
+    if not context.roles.intersection(ACADEMIC_CREATE_ROLES):
+        return False
+    return bool(context.faculty_ids)
 
 
 def user_can_create_groups(user):
@@ -131,7 +167,71 @@ def _selected_value(data, field):
     return data.get(field) or None
 
 
+def _allowed_faculty_queryset(user):
+    context = get_access_context(user)
+    queryset = Facultad.objects.all()
+    if context.is_superadmin:
+        return queryset
+    faculty_ids = set(context.faculty_ids)
+    faculty_ids.update(
+        ProgramaAcademico.objects.filter(
+            id_programa_academico__in=context.program_ids,
+        ).values_list("facultad_id", flat=True),
+    )
+    if not faculty_ids:
+        return queryset.none()
+    return queryset.filter(id_facultad__in=faculty_ids)
+
+
+def _allowed_program_queryset(user, selected_facultad=None):
+    context = get_access_context(user)
+    queryset = ProgramaAcademico.objects.select_related("facultad").filter(
+        estado="Activo",
+    )
+    if selected_facultad:
+        queryset = queryset.filter(facultad_id=selected_facultad)
+    if context.is_superadmin:
+        return queryset
+    if not context.program_ids:
+        return queryset.none()
+    return queryset.filter(id_programa_academico__in=context.program_ids)
+
+
+def _create_user_with_group(
+    *,
+    nombre,
+    tipo_de_documento,
+    numero_de_documento,
+    correo,
+    group_name,
+):
+    user = CustomUser(
+        nombre=nombre,
+        tipo_de_documento=tipo_de_documento,
+        numero_de_documento=numero_de_documento,
+        correo=correo,
+        is_active=True,
+        is_staff=False,
+        is_superuser=False,
+    )
+    user.set_password(DEFAULT_INITIAL_PASSWORD)
+    user.save()
+    group, _created = Group.objects.get_or_create(name=group_name)
+    user.groups.add(group)
+    return user
+
+
 class EstudianteCreateForm(forms.Form):
+    nombre = forms.CharField(label="Nombre completo", max_length=80)
+    tipo_de_documento = forms.ChoiceField(
+        label="Tipo de documento",
+        choices=CustomUser.TipoDocumento.choices,
+    )
+    numero_de_documento = forms.CharField(
+        label="Numero de documento",
+        max_length=20,
+    )
+    correo = forms.EmailField(label="Correo institucional")
     id_usuario = forms.ModelChoiceField(
         label="Usuario",
         queryset=UsuarioGlobal.objects.none(),
@@ -161,24 +261,16 @@ class EstudianteCreateForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.user = user
         self.estudiante = estudiante
+        self.is_create = estudiante is None
         selected_facultad = _selected_value(self.data, "id_facultad") or (
             selected_facultad
         )
 
-        faculty_queryset = Facultad.objects.all()
-        program_queryset = ProgramaAcademico.objects.select_related("facultad").filter(
-            estado="Activo",
+        faculty_queryset = _allowed_faculty_queryset(user)
+        program_queryset = _allowed_program_queryset(
+            user,
+            selected_facultad=selected_facultad,
         )
-        if selected_facultad:
-            program_queryset = program_queryset.filter(facultad_id=selected_facultad)
-        if not is_superadmin(user):
-            coordinated_program_ids = get_coordinated_program_ids(user)
-            program_queryset = program_queryset.filter(
-                id_programa_academico__in=coordinated_program_ids,
-            )
-            faculty_queryset = faculty_queryset.filter(
-                programas__id_programa_academico__in=coordinated_program_ids,
-            )
 
         self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
             "nombre_facultad",
@@ -188,20 +280,37 @@ class EstudianteCreateForm(forms.Form):
         self.fields["id_programa_academico"].queryset = program_queryset.order_by(
             "nombre_programa",
         )
-        candidate_ids = _candidate_user_ids()
-        user_queryset = UsuarioGlobal.objects.filter(id_usuario__in=candidate_ids)
-        if estudiante is not None and estudiante.id_usuario:
+
+        if self.is_create:
+            del self.fields["id_usuario"]
+            self.fields["correo"].help_text = (
+                f"Se asignara la contraseña inicial {DEFAULT_INITIAL_PASSWORD}."
+            )
+        else:
+            for field_name in (
+                "nombre",
+                "tipo_de_documento",
+                "numero_de_documento",
+                "correo",
+            ):
+                del self.fields[field_name]
+            candidate_ids = _candidate_user_ids()
+            user_queryset = UsuarioGlobal.objects.filter(id_usuario__in=candidate_ids)
             user_queryset = user_queryset | UsuarioGlobal.objects.filter(
                 id_usuario=estudiante.id_usuario,
             )
-        self.fields["id_usuario"].queryset = user_queryset.order_by("nombre", "correo")
-        self.fields["id_usuario"].label_from_instance = (
-            lambda user: f"{user.nombre} <{user.correo}>"
-        )
+            self.fields["id_usuario"].queryset = user_queryset.order_by(
+                "nombre",
+                "correo",
+            )
+            self.fields["id_usuario"].label_from_instance = (
+                lambda user: f"{user.nombre} <{user.correo}>"
+            )
+
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
-        if estudiante is not None:
+        if not self.is_create:
             self.fields["id_facultad"].disabled = True
             self.fields["id_usuario"].disabled = True
             self.fields["id_usuario"].initial = estudiante.id_usuario
@@ -214,12 +323,14 @@ class EstudianteCreateForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        id_usuario = cleaned_data.get("id_usuario")
+        id_usuario = cleaned_data.get("id_usuario") if not self.is_create else None
         faculty = cleaned_data.get("id_facultad")
         program = cleaned_data.get("id_programa_academico")
         limite_matriculas = cleaned_data.get("limite_matriculas")
 
-        if not user_can_create_students(self.user):
+        if self.is_create and not user_can_create_students(self.user):
+            raise ValidationError("No tienes permisos para crear estudiantes.")
+        if not self.is_create and not user_can_write_students(self.user):
             raise ValidationError("No tienes permisos para gestionar estudiantes.")
 
         if not faculty:
@@ -236,6 +347,23 @@ class EstudianteCreateForm(forms.Form):
                 "El programa seleccionado no pertenece a la facultad.",
             )
 
+        if self.is_create:
+            correo = cleaned_data.get("correo")
+            tipo_documento = cleaned_data.get("tipo_de_documento")
+            numero_documento = cleaned_data.get("numero_de_documento")
+
+            if correo and CustomUser.objects.filter(correo__iexact=correo).exists():
+                raise ValidationError("Ya existe un usuario con ese correo.")
+            if (
+                tipo_documento
+                and numero_documento
+                and CustomUser.objects.filter(
+                    tipo_de_documento=tipo_documento,
+                    numero_de_documento=numero_documento,
+                ).exists()
+            ):
+                raise ValidationError("Ya existe un usuario con ese documento.")
+
         if id_usuario:
             existing_students = EstudianteDetalle.objects.filter(
                 id_usuario=id_usuario.pk,
@@ -249,14 +377,33 @@ class EstudianteCreateForm(forms.Form):
 
         return cleaned_data
 
+    def clean_correo(self):
+        return self.cleaned_data["correo"].strip().lower()
+
     def save(self):
-        return create_estudiante(
-            id_usuario=self.cleaned_data["id_usuario"].pk,
-            id_facultad=self.cleaned_data["id_facultad"].pk,
-            id_programa_academico=self.cleaned_data["id_programa_academico"].pk,
-            limite_matriculas=self.cleaned_data["limite_matriculas"],
-            estado_estudiante=self.cleaned_data["estado_estudiante"],
-        )
+        with transaction.atomic():
+            user = _create_user_with_group(
+                nombre=self.cleaned_data["nombre"],
+                tipo_de_documento=self.cleaned_data["tipo_de_documento"],
+                numero_de_documento=self.cleaned_data["numero_de_documento"],
+                correo=self.cleaned_data["correo"],
+                group_name="estudiante",
+            )
+            id_estudiante = create_estudiante(
+                id_usuario=user.pk,
+                id_facultad=self.cleaned_data["id_facultad"].pk,
+                id_programa_academico=self.cleaned_data["id_programa_academico"].pk,
+                limite_matriculas=self.cleaned_data["limite_matriculas"],
+                estado_estudiante=self.cleaned_data["estado_estudiante"],
+            )
+        return {
+            "id_estudiante": id_estudiante,
+            "id_usuario": user.pk,
+            "correo": user.correo,
+            "nombre": user.nombre,
+            "programa": self.cleaned_data["id_programa_academico"],
+            "id_facultad": self.cleaned_data["id_facultad"].pk,
+        }
 
 
 class EstudianteUpdateForm(EstudianteCreateForm):
@@ -269,6 +416,106 @@ class EstudianteUpdateForm(EstudianteCreateForm):
             limite_matriculas=self.cleaned_data["limite_matriculas"],
             estado_estudiante=self.cleaned_data["estado_estudiante"],
         )
+
+
+class ProfesorCreateForm(forms.Form):
+    nombre = forms.CharField(label="Nombre completo", max_length=80)
+    tipo_de_documento = forms.ChoiceField(
+        label="Tipo de documento",
+        choices=CustomUser.TipoDocumento.choices,
+    )
+    numero_de_documento = forms.CharField(
+        label="Numero de documento",
+        max_length=20,
+    )
+    correo = forms.EmailField(label="Correo institucional")
+    id_facultad = forms.ModelChoiceField(
+        label="Facultad",
+        queryset=Facultad.objects.none(),
+        to_field_name="id_facultad",
+    )
+    categoria = forms.ChoiceField(
+        label="Categoria",
+        choices=PROFESSOR_CATEGORY_CHOICES,
+        initial="Asistente",
+    )
+    vinculacion = forms.ChoiceField(
+        label="Vinculacion",
+        choices=PROFESSOR_LINK_CHOICES,
+        initial="Planta",
+    )
+
+    def __init__(self, *args, user, selected_facultad=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        selected_facultad = _selected_value(self.data, "id_facultad") or (
+            selected_facultad
+        )
+        faculty_queryset = _allowed_faculty_queryset(user)
+        self.fields["id_facultad"].queryset = faculty_queryset.distinct().order_by(
+            "nombre_facultad",
+        )
+        if selected_facultad:
+            self.fields["id_facultad"].initial = selected_facultad
+        self.fields["correo"].help_text = (
+            f"Se asignara la contraseña inicial {DEFAULT_INITIAL_PASSWORD}."
+        )
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        faculty = cleaned_data.get("id_facultad")
+        correo = cleaned_data.get("correo")
+        tipo_documento = cleaned_data.get("tipo_de_documento")
+        numero_documento = cleaned_data.get("numero_de_documento")
+
+        if not user_can_create_professors(self.user):
+            raise ValidationError("No tienes permisos para crear profesores.")
+        if not faculty:
+            raise ValidationError("La facultad es obligatoria.")
+        if faculty and faculty not in self.fields["id_facultad"].queryset:
+            raise ValidationError("La facultad seleccionada esta fuera de tu alcance.")
+        if correo and CustomUser.objects.filter(correo__iexact=correo).exists():
+            raise ValidationError("Ya existe un usuario con ese correo.")
+        if (
+            tipo_documento
+            and numero_documento
+            and CustomUser.objects.filter(
+                tipo_de_documento=tipo_documento,
+                numero_de_documento=numero_documento,
+            ).exists()
+        ):
+            raise ValidationError("Ya existe un usuario con ese documento.")
+
+        return cleaned_data
+
+    def clean_correo(self):
+        return self.cleaned_data["correo"].strip().lower()
+
+    def save(self):
+        with transaction.atomic():
+            user = _create_user_with_group(
+                nombre=self.cleaned_data["nombre"],
+                tipo_de_documento=self.cleaned_data["tipo_de_documento"],
+                numero_de_documento=self.cleaned_data["numero_de_documento"],
+                correo=self.cleaned_data["correo"],
+                group_name="docente",
+            )
+            id_profesor = create_profesor(
+                id_usuario=user.pk,
+                id_facultad=self.cleaned_data["id_facultad"].pk,
+                categoria=self.cleaned_data["categoria"],
+                vinculacion=self.cleaned_data["vinculacion"],
+            )
+        return {
+            "id_profesor": id_profesor,
+            "id_usuario": user.pk,
+            "correo": user.correo,
+            "nombre": user.nombre,
+            "facultad": self.cleaned_data["id_facultad"],
+            "id_facultad": self.cleaned_data["id_facultad"].pk,
+        }
 
 
 class GrupoCreateForm(forms.Form):

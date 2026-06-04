@@ -25,6 +25,7 @@ from apps.academica.views import (
     NotaInscripcionUpdateView,
     PlanEstudiosListView,
     PreRequisitoListView,
+    ProfesorCreateView,
     ProfesorDetailView,
     ProfesorListView,
 )
@@ -82,7 +83,13 @@ urlpatterns = [
         name="estudiante_deactivate",
     ),
     path("docentes/", ProfesorListView.as_view(), name="profesor_list"),
+    path("docentes/crear/", ProfesorCreateView.as_view(), name="profesor_create"),
     path("profesores/", ProfesorListView.as_view(), name="profesor_list_alias"),
+    path(
+        "profesores/crear/",
+        ProfesorCreateView.as_view(),
+        name="profesor_create_alias",
+    ),
     path(
         "docentes/<uuid:id_profesor>/",
         ProfesorDetailView.as_view(),

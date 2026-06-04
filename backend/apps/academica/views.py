@@ -13,6 +13,7 @@ from apps.academica.distributed_write import (
     cancel_inscripcion,
     deactivate_or_cancel_grupo,
     delete_or_deactivate_estudiante,
+    get_fdw_schema_for_facultad,
 )
 from apps.academica.forms import (
     EstudianteCreateForm,
@@ -21,12 +22,15 @@ from apps.academica.forms import (
     GrupoUpdateForm,
     InscripcionCreateForm,
     InscripcionUpdateForm,
+    ProfesorCreateForm,
     user_can_cancel_enrollments,
     user_can_create_enrollments,
     user_can_create_groups,
+    user_can_create_professors,
     user_can_create_students,
     user_can_edit_enrollments,
     user_can_write_enrollments,
+    user_can_write_students,
 )
 from apps.accounts.access import (
     STUDENT_ROLES,
@@ -55,7 +59,9 @@ from apps.reportes.models import (
 )
 
 ACADEMIC_READ_ROLES = (*STUDENT_ROLES, "docente", "administrativo")
+STUDENT_CREATE_ROLES = ("coordinador", "decano", "administrativo", "superadmin")
 STUDENT_WRITE_ROLES = ("coordinador", "superadmin")
+PROFESSOR_CREATE_ROLES = ("coordinador", "decano", "administrativo", "superadmin")
 GROUP_WRITE_ROLES = ("coordinador", "superadmin")
 ENROLLMENT_WRITE_ROLES = ("estudiante", "coordinador", "decano", "superadmin")
 ENROLLMENT_EDIT_ROLES = ("estudiante", "docente", "coordinador", "decano", "superadmin")
@@ -341,6 +347,7 @@ class EstudianteListView(AcademicReportListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_create_students"] = user_can_create_students(self.request.user)
+        context["can_write_students"] = user_can_write_students(self.request.user)
         context["facultad_choices"] = facultad_choices()
         context["programa_choices"] = programa_choices(
             self.request.GET.get("id_facultad"),
@@ -366,11 +373,12 @@ class EstudianteDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_create_students"] = user_can_create_students(self.request.user)
+        context["can_write_students"] = user_can_write_students(self.request.user)
         return context
 
 
 class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
-    allowed_roles = STUDENT_WRITE_ROLES
+    allowed_roles = STUDENT_CREATE_ROLES
     form_class = EstudianteCreateForm
     template_name = "academica/estudiante_form.html"
     success_url = reverse_lazy("academica:estudiante_list")
@@ -382,15 +390,22 @@ class EstudianteCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
         return kwargs
 
     def form_valid(self, form):
-        id_estudiante = form.save()
+        result = form.save()
         registrar_auditoria(
             self.request.user,
             "CREAR_ESTUDIANTE",
-            f"Estudiante creado: {id_estudiante}",
-            esquema_afectado="fdw_*",
+            (
+                "Estudiante creado: "
+                f"{result['nombre']} <{result['correo']}> - "
+                f"{result['programa']}"
+            ),
+            esquema_afectado=get_fdw_schema_for_facultad(result["id_facultad"]),
             tabla_afectada="estudiante",
         )
-        messages.success(self.request, "Estudiante creado en el nodo distribuido.")
+        messages.success(
+            self.request,
+            "Estudiante creado correctamente en el nodo distribuido.",
+        )
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -496,6 +511,9 @@ class ProfesorListView(AcademicReportListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["can_create_professors"] = user_can_create_professors(
+            self.request.user,
+        )
         context["facultad_choices"] = facultad_choices()
         context["categoria_choices"] = distinct_choices(
             ProfesorDetalle,
@@ -507,6 +525,46 @@ class ProfesorListView(AcademicReportListView):
             "vinculacion",
             "Todas las vinculaciones",
         )
+        return context
+
+
+class ProfesorCreateView(LoginRequiredMixin, RoleRequiredMixin, FormView):
+    allowed_roles = PROFESSOR_CREATE_ROLES
+    form_class = ProfesorCreateForm
+    template_name = "academica/profesor_form.html"
+    success_url = reverse_lazy("academica:profesor_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs["selected_facultad"] = self.request.GET.get("id_facultad")
+        return kwargs
+
+    def form_valid(self, form):
+        result = form.save()
+        registrar_auditoria(
+            self.request.user,
+            "CREAR_PROFESOR",
+            (
+                "Profesor creado: "
+                f"{result['nombre']} <{result['correo']}> - "
+                f"{result['facultad']}"
+            ),
+            esquema_afectado=get_fdw_schema_for_facultad(result["id_facultad"]),
+            tabla_afectada="profesor",
+        )
+        messages.success(
+            self.request,
+            "Profesor creado correctamente en el nodo distribuido.",
+        )
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_title"] = "Crear profesor"
+        context["submit_label"] = "Crear profesor"
+        context["facultad_choices"] = facultad_choices("Seleccione facultad")
+        context["selected_facultad"] = self.request.GET.get("id_facultad", "")
         return context
 
 

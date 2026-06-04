@@ -31,6 +31,11 @@ def _grupo_table(id_facultad):
     return f'"{schema}"."grupo"'
 
 
+def _profesor_table(id_facultad):
+    schema = get_fdw_schema_for_facultad(id_facultad)
+    return f'"{schema}"."profesor"'
+
+
 def _inscripcion_table(id_facultad):
     schema = get_fdw_schema_for_facultad(id_facultad)
     return f'"{schema}"."inscripcion"'
@@ -108,6 +113,38 @@ def create_estudiante(
             ],
         )
     return id_estudiante
+
+
+def create_profesor(
+    *,
+    id_usuario,
+    id_facultad,
+    categoria,
+    vinculacion,
+):
+    id_profesor = uuid.uuid4()
+    table = _profesor_table(id_facultad)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            insert into {table} (
+                id_profesor,
+                id_usuario,
+                id_facultad,
+                categoria,
+                vinculacion
+            )
+            values (%s, %s, %s, %s, %s)
+            """,
+            [
+                id_profesor,
+                id_usuario,
+                id_facultad,
+                categoria,
+                vinculacion,
+            ],
+        )
+    return id_profesor
 
 
 def update_estudiante(

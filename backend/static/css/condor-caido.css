@@ -1259,6 +1259,20 @@ button[type="submit"]:not(.btn):hover {
     max-width: 720px;
 }
 
+.condor-form-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--condor-line-soft);
+    border-radius: var(--condor-radius);
+    background: var(--condor-surface-strong);
+    box-shadow: 0 8px 22px rgba(83, 61, 42, 0.06);
+}
+
+.condor-form-section h2 {
+    margin-top: 0;
+    font-size: 0.98rem;
+}
+
 .condor-plan-accordion {
     display: grid;
     gap: 0.78rem;

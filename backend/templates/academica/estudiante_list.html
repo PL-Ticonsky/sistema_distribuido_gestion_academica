@@ -76,7 +76,7 @@
                             <a class="btn btn-outline-secondary" href="{% url 'academica:estudiante_detail' estudiante.id_estudiante %}">
                                 Ver
                             </a>
-                            {% if can_create_students %}
+                            {% if can_write_students %}
                                 <a class="btn btn-outline-primary" href="{% url 'academica:estudiante_update' estudiante.id_estudiante %}">
                                     Editar
                                 </a>
